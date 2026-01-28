@@ -1,91 +1,50 @@
 import streamlit as st
-import itertools
 
-st.set_page_config(page_title="Simulador de Sistemas Betsson", layout="wide")
+st.header("🎰 Simulador por Marcadores (Goles/Puntos)")
+st.write("Ingresa los goles o puntos de cada equipo para calcular el resultado:")
 
-st.title("🚀 Simulador de Sistemas Pro: Multi-Error y Multi-Partido")
+res_sim = []
+cols_sim = st.columns(num_p)
 
-# --- CONFIGURACIÓN EN LA BARRA LATERAL ---
-st.sidebar.header("⚙️ Parámetros del Sistema")
-num_partidos = st.sidebar.slider("Número de partidos", 2, 10, 6)
-solo_ganador = st.sidebar.checkbox("Modo 2 resultados (Sin X)", value=False)
-opciones = ["1", "2"] if solo_ganador else ["1", "X", "2"]
-max_errores = st.sidebar.select_slider("Errores a corregir", options=list(range(1, 5)), value=2)
-apuesta_col = st.sidebar.number_input("Inversión por columna (€)", min_value=0.1, value=1.0)
+for i in range(num_p):
+    with cols_sim[i]:
+        st.markdown(f"*{nombres_equipos[i]}*")
+        # Campos para goles
+        g_loc = st.number_input("Local", min_value=0, step=1, key=f"gl_{i}")
+        g_vis = st.number_input("Visit.", min_value=0, step=1, key=f"gv_{i}")
+        
+        # Lógica automática de signo
+        if solo_ganador: # Si es Tenis/Basket (No hay empate)
+            signo_auto = "1" if g_loc > g_vis else "2"
+        else: # Fútbol (Con empate)
+            if g_loc > g_vis: signo_auto = "1"
+            elif g_loc < g_vis: signo_auto = "2"
+            else: signo_auto = "X"
+            
+        # Mostrar el signo detectado
+        color_signo = "🟢" if signo_auto == col_base[i] else "🔴"
+        st.code(f"Resultado: {signo_auto} {color_signo}")
+        
+        res_sim.append(signo_auto)
 
-# --- ENTRADA DE CUOTAS ---
-st.sidebar.header("📈 Cuotas Reales")
-matriz_cuotas = []
-for i in range(num_partidos):
-    st.sidebar.subheader(f"Partido {i+1}")
-    cols_q = st.sidebar.columns(len(opciones))
-    dict_q = {}
-    for j, op in enumerate(opciones):
-        dict_q[op] = cols_q[j].number_input(f"Cuota {op}", min_value=1.01, value=2.0, key=f"q_{op}_{i}")
-    matriz_cuotas.append(dict_q)
+# --- CONTADOR DINÁMICO ---
+aciertos = sum(1 for b, r in zip(col_base, res_sim) if b == r)
+fallos = num_p - aciertos
+margen = err_max - fallos
 
-# --- COLUMNA BASE Y SIMULACIÓN ---
-st.subheader("1. Configuración de Base y Resultados Reales")
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown("### 🎯 Tu Columna Base")
-    base = [st.selectbox(f"Base Part. {i+1}", opciones, key=f"b_{i}") for i in range(num_partidos)]
-
-with col2:
-    st.markdown("### 🏟️ Resultados Reales (Simulación)")
-    reales = [st.selectbox(f"Resultado Real {i+1}", opciones, key=f"r_{i}") for i in range(num_partidos)]
-
-# --- LÓGICA DE GENERACIÓN ---
-def generar_sistema():
-    combs_posibles = itertools.product(opciones, repeat=num_partidos)
-    sistema = []
-    for c in combs_posibles:
-        diff_base = sum(1 for i in range(num_partidos) if c[i] != base[i])
-        if diff_base <= max_errores:
-            cuota_t = 1.0
-            for p, signo in enumerate(c):
-                cuota_t *= matriz_cuotas[p][signo]
-            sistema.append({"comb": c, "bruta": cuota_t * apuesta_col})
-    return sistema
-
-sistema_final = generar_sistema()
-inversion_total = len(sistema_final) * apuesta_col
-
-# --- BOTÓN DE SIMULACIÓN Y CÁLCULO DE PREMIO ---
 st.divider()
-if st.button("🎰 EJECUTAR SIMULACIÓN DE PREMIOS"):
-    ganancia_total_bruta = 0
-    columnas_ganadoras = 0
-    
-    for col in sistema_final:
-        if list(col["comb"]) == reales:
-            ganancia_total_bruta += col["bruta"]
-            columnas_ganadoras += 1
-    
-    ganancia_neta = ganancia_total_bruta - inversion_total
-    
-    # Mostrar resultados de la simulación
-    s1, s2, s3 = st.columns(3)
-    s1.metric("Columnas Ganadoras", columnas_ganadoras)
-    s2.metric("Total Cobrado (Bruto)", f"{ganancia_total_bruta:.2f} €")
-    s3.metric("Balance Final (Neto)", f"{ganancia_neta:.2f} €", delta=round(ganancia_neta, 2))
-    
-    if ganancia_neta > 0:
-        st.balloons()
-        st.success(f"¡Felicidades! Has ganado {ganancia_neta:.2f} € netos.")
-    else:
-        st.error(f"Pérdida neta de {abs(ganancia_neta):.2f} €. Inténtalo de nuevo.")
+c1, c2, c3 = st.columns(3)
+c1.metric("✅ Aciertos", f"{aciertos}")
+c2.metric("❌ Fallos", f"{fallos}", delta=f"Margen: {margen}")
+c3.progress(aciertos / num_p)
 
-# --- TABLA DE TODAS LAS COLUMNAS ---
-st.subheader(f"📋 Desglose del Sistema ({len(sistema_final)} columnas)")
-tabla_detallada = []
-for i, d in enumerate(sistema_final, 1):
-    tabla_detallada.append({
-        "Nº": i,
-        "Combinación": " - ".join(d["comb"]),
-        "Ganancia Bruta": f"{d['bruta']:.2f} €",
-        "Ganancia Neta": f"{(d['bruta'] - inversion_total):.2f} €"
-    })
+if margen >= 0:
+    st.success(f"¡Vas por buen camino! Estás dentro de los {err_max} errores permitidos.")
+else:
+    st.error(f"Se han superado los errores. Sistema sin premio.")
 
-st.dataframe(tabla_detallada, use_container_width=True)
+# Botón para registrar en biblioteca
+if st.checkbox("💾 ¿Guardar marcadores finales en la Biblioteca?"):
+    if st.button("Confirmar y Registrar"):
+        # Aquí se guarda en el historial de equipos con los marcadores incluidos
+        pass
