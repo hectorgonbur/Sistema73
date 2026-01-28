@@ -1,87 +1,91 @@
 import streamlit as st
 import itertools
-import json
-import os
-from datetime import datetime
 
-st.set_page_config(page_title="Betsson Pro: Real vs Virtual", layout="wide")
+st.set_page_config(page_title="Simulador de Sistemas Betsson", layout="wide")
 
-# --- PERSISTENCIA MEJORADA ---
-def gestionar_archivos(accion, nombre=None, datos=None):
-    arch_sistemas = "mis_sistemas_premium.json"
-    arch_stats = "historial_equipos_pro.json"
-    
-    for arc in [arch_sistemas, arch_stats]:
-        if not os.path.exists(arc):
-            with open(arc, "w") as f: json.dump({}, f)
+st.title("🚀 Simulador de Sistemas Pro: Multi-Error y Multi-Partido")
 
-    if accion == "guardar_sistema":
-        with open(arch_sistemas, "r") as f: bd = json.load(f)
-        bd[nombre] = datos
-        with open(arch_sistemas, "w") as f: json.dump(bd, f)
-    elif accion == "listar_sistemas":
-        with open(arch_sistemas, "r") as f: return list(json.load(f).keys())
-    elif accion == "cargar_sistema":
-        with open(arch_sistemas, "r") as f: return json.load(f).get(nombre)
-    elif accion == "registrar_stats":
-        with open(arch_stats, "r") as f: stats = json.load(f)
-        for entry in datos:
-            eq = entry['equipo']
-            if eq not in stats: stats[eq] = []
-            stats[eq].append(entry)
-        with open(arch_stats, "w") as f: json.dump(stats, f)
-    elif accion == "obtener_stats":
-        with open(arch_stats, "r") as f: return json.load(f)
-
-# --- INTERFAZ PRINCIPAL ---
-st.title("🏆 Betsson System & Analytics")
-nombres_s = gestionar_archivos("listar_sistemas")
-seleccion = st.sidebar.selectbox("📂 Abrir Jugada:", ["-- Nuevo --"] + nombres_s)
-datos_c = gestionar_archivos("cargar_sistema", seleccion) if seleccion != "-- Nuevo --" else None
-
-# (Parámetros de configuración simplificados para este bloque)
-st.sidebar.header("⚙️ Configuración")
-num_p = st.sidebar.slider("Partidos", 2, 10, datos_c["num_p"] if datos_c else 6)
-solo_ganador = st.sidebar.checkbox("Modo 2 Resultados", value=datos_c["solo_ganador"] if datos_c else False)
+# --- CONFIGURACIÓN EN LA BARRA LATERAL ---
+st.sidebar.header("⚙️ Parámetros del Sistema")
+num_partidos = st.sidebar.slider("Número de partidos", 2, 10, 6)
+solo_ganador = st.sidebar.checkbox("Modo 2 resultados (Sin X)", value=False)
 opciones = ["1", "2"] if solo_ganador else ["1", "X", "2"]
-err_max = st.sidebar.select_slider("Errores", options=[1, 2, 3, 4], value=datos_c["err_max"] if datos_c else 2)
-apuesta = st.sidebar.number_input("Inversión (€/col)", value=datos_c["apuesta"] if datos_c else 1.0)
+max_errores = st.sidebar.select_slider("Errores a corregir", options=list(range(1, 5)), value=2)
+apuesta_col = st.sidebar.number_input("Inversión por columna (€)", min_value=0.1, value=1.0)
 
-# --- ENTRADA DE EQUIPOS Y CUOTAS ---
-# [Aquí se mantiene la misma estructura de nombres de equipos y cuotas que definimos antes]
-# ...
+# --- ENTRADA DE CUOTAS ---
+st.sidebar.header("📈 Cuotas Reales")
+matriz_cuotas = []
+for i in range(num_partidos):
+    st.sidebar.subheader(f"Partido {i+1}")
+    cols_q = st.sidebar.columns(len(opciones))
+    dict_q = {}
+    for j, op in enumerate(opciones):
+        dict_q[op] = cols_q[j].number_input(f"Cuota {op}", min_value=1.01, value=2.0, key=f"q_{op}_{i}")
+    matriz_cuotas.append(dict_q)
 
-# --- SECCIÓN DEL SIMULADOR CON INTERRUPTOR ---
+# --- COLUMNA BASE Y SIMULACIÓN ---
+st.subheader("1. Configuración de Base y Resultados Reales")
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("### 🎯 Tu Columna Base")
+    base = [st.selectbox(f"Base Part. {i+1}", opciones, key=f"b_{i}") for i in range(num_partidos)]
+
+with col2:
+    st.markdown("### 🏟️ Resultados Reales (Simulación)")
+    reales = [st.selectbox(f"Resultado Real {i+1}", opciones, key=f"r_{i}") for i in range(num_partidos)]
+
+# --- LÓGICA DE GENERACIÓN ---
+def generar_sistema():
+    combs_posibles = itertools.product(opciones, repeat=num_partidos)
+    sistema = []
+    for c in combs_posibles:
+        diff_base = sum(1 for i in range(num_partidos) if c[i] != base[i])
+        if diff_base <= max_errores:
+            cuota_t = 1.0
+            for p, signo in enumerate(c):
+                cuota_t *= matriz_cuotas[p][signo]
+            sistema.append({"comb": c, "bruta": cuota_t * apuesta_col})
+    return sistema
+
+sistema_final = generar_sistema()
+inversion_total = len(sistema_final) * apuesta_col
+
+# --- BOTÓN DE SIMULACIÓN Y CÁLCULO DE PREMIO ---
 st.divider()
-st.header("🎰 Simulador y Registro de Resultados")
-
-col_sim1, col_sim2 = st.columns([2, 1])
-
-with col_sim1:
-    st.write("Selecciona los resultados de los partidos:")
-    res_sim = [st.selectbox(f"Res. {i+1}", opciones, key=f"sim_{i}") for i in range(num_p)]
-
-with col_sim2:
-    st.write("🔧 Opciones de Registro")
-    es_real = st.checkbox("✅ ¿ES UNA JUGADA REAL?", help="Si marcas esto, los resultados se guardarán en tu biblioteca de estadísticas. Si no, será solo una prueba visual.")
-    boton_simular = st.button("🚀 CALCULAR PREMIO")
-
-if boton_simular:
-    # Lógica de cálculo de premios (ya definida)
-    # ...
+if st.button("🎰 EJECUTAR SIMULACIÓN DE PREMIOS"):
+    ganancia_total_bruta = 0
+    columnas_ganadoras = 0
     
-    if es_real:
-        # Solo guardamos en la biblioteca si el interruptor está activo
-        nuevos_datos = []
-        for i in range(num_p):
-            # (Aquí va la lógica de recopilación de datos para cada equipo...)
-            pass 
-        gestionar_archivos("registrar_stats", datos=nuevos_datos)
-        st.success("📊 ¡Datos guardados en tu historial de equipos!")
+    for col in sistema_final:
+        if list(col["comb"]) == reales:
+            ganancia_total_bruta += col["bruta"]
+            columnas_ganadoras += 1
+    
+    ganancia_neta = ganancia_total_bruta - inversion_total
+    
+    # Mostrar resultados de la simulación
+    s1, s2, s3 = st.columns(3)
+    s1.metric("Columnas Ganadoras", columnas_ganadoras)
+    s2.metric("Total Cobrado (Bruto)", f"{ganancia_total_bruta:.2f} €")
+    s3.metric("Balance Final (Neto)", f"{ganancia_neta:.2f} €", delta=round(ganancia_neta, 2))
+    
+    if ganancia_neta > 0:
+        st.balloons()
+        st.success(f"¡Felicidades! Has ganado {ganancia_neta:.2f} € netos.")
     else:
-        st.info("💡 Prueba virtual finalizada. Los datos no se han guardado en la biblioteca.")
+        st.error(f"Pérdida neta de {abs(ganancia_neta):.2f} €. Inténtalo de nuevo.")
 
-# --- BIBLIOTECA DE ESTADÍSTICAS ---
-st.divider()
-st.subheader("📚 Biblioteca de Rendimiento Real")
-# [Aquí se muestra la tabla de estadísticas con la opción de filtrar solo por 'Reales']
+# --- TABLA DE TODAS LAS COLUMNAS ---
+st.subheader(f"📋 Desglose del Sistema ({len(sistema_final)} columnas)")
+tabla_detallada = []
+for i, d in enumerate(sistema_final, 1):
+    tabla_detallada.append({
+        "Nº": i,
+        "Combinación": " - ".join(d["comb"]),
+        "Ganancia Bruta": f"{d['bruta']:.2f} €",
+        "Ganancia Neta": f"{(d['bruta'] - inversion_total):.2f} €"
+    })
+
+st.dataframe(tabla_detallada, use_container_width=True)
