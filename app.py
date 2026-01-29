@@ -6,7 +6,7 @@ from datetime import datetime
 
 # --- CONFIGURACIÓN E INTERFAZ ---
 st.set_page_config(page_title="Betsson Pro: Master Suite", layout="wide")
-st.title("⚽ Betsson Pro: Sistema Profesional (Calculadora de Beneficios)")
+st.title("⚽ Betsson Pro: Sistema Profesional (2-10 Partidos)")
 
 # --- INICIALIZACIÓN DE ESTADO (MEMORIA) ---
 if "biblioteca" not in st.session_state:
@@ -49,11 +49,11 @@ def genera_sistema(base_user, err_maxima, quotes, costo, ops):
             for idx, s in enumerate(c):
                 quota_tot *= quotes[idx][s]
             
-            # SOLO calculamos la bruta aquí. La neta se calcula después al saber el total de columnas.
+            # --- CAMBIO: ELIMINADA LA COLUMNA "QUOTA TOTAL" ---
+            # Nos quedamos solo con el dinero, que es lo que importa.
             sistema.append({
                 "Columna": "-".join(c),
                 "Fallos": diff,
-                "Quota Total": round(quota_tot, 2),
                 "Ganancia Bruta (€)": round(quota_tot * costo, 2)
             })
     return pd.DataFrame(sistema)
@@ -110,19 +110,19 @@ for i in range(num_p):
                 d_q[op] = val_q
             matriz_cuotas.append(d_q)
 
-# --- CÁLCULO Y VISUALIZACIÓN DEL SISTEMA (CORREGIDO) ---
+# --- CÁLCULO Y VISUALIZACIÓN DEL SISTEMA ---
 st.divider()
 st.subheader("2. Tabla de Combinaciones y Ganancias")
 
 if st.button("📊 Calcular Rentabilidad", type="primary"):
     with st.spinner('Procesando matemáticas...'):
-        # 1. Generamos el sistema básico
+        # 1. Generamos el sistema
         df_sistema = genera_sistema(col_base, err_max, matriz_cuotas, apuesta_col, opciones)
         
         # 2. Calculamos el Costo Total
         spesa_totale = len(df_sistema) * apuesta_col
         
-        # 3. CORRECCIÓN: Calculamos Ganancia Neta (Bruta - Costo Total)
+        # 3. Calculamos Ganancia Neta
         if not df_sistema.empty:
             df_sistema["Ganancia Neta (€)"] = df_sistema["Ganancia Bruta (€)"] - spesa_totale
         
@@ -133,19 +133,18 @@ if st.button("📊 Calcular Rentabilidad", type="primary"):
         
         if not df_sistema.empty:
             max_neto = df_sistema["Ganancia Neta (€)"].max()
-            # Color verde si hay ganancia, rojo si hay pérdida
-            c3.metric("Mejor Ganancia Neta Posible", f"{max_neto:.2f} €", delta_color="normal" if max_neto > 0 else "inverse")
+            c3.metric("Mejor Ganancia Neta", f"{max_neto:.2f} €", delta_color="normal" if max_neto > 0 else "inverse")
         
-        # TABLA CON FORMATO
+        # TABLA (LIMPIA, SIN QUOTA TOTAL)
         if not df_sistema.empty:
             st.dataframe(
                 df_sistema.style.format({
-                    "Quota Total": "{:.2f}", 
                     "Ganancia Bruta (€)": "{:.2f} €",
                     "Ganancia Neta (€)": "{:.2f} €"
                 }),
                 use_container_width=True,
-                height=400
+                height=400,
+                hide_index=True # Ocultamos el índice numérico para ganar más espacio
             )
         else:
             st.warning("No se generaron columnas con esa configuración.")
@@ -160,11 +159,11 @@ elif "ultimo_sistema" in st.session_state:
     st.info(f"Mostrando último cálculo (Costo: {spesa:.2f} €)")
     st.dataframe(
         df.style.format({
-            "Quota Total": "{:.2f}", 
             "Ganancia Bruta (€)": "{:.2f} €",
             "Ganancia Neta (€)": "{:.2f} €"
         }),
-        use_container_width=True
+        use_container_width=True,
+        hide_index=True
     )
 
 # --- SIMULADOR DE RESULTADOS ---
@@ -230,7 +229,7 @@ if st.session_state["biblioteca"]:
         })
     
     df_biblio = pd.DataFrame(lista_stats)
-    st.dataframe(df_biblio, use_container_width=True)
+    st.dataframe(df_biblio, use_container_width=True, hide_index=True)
 
 # --- DESCARGA ---
 st.divider()
