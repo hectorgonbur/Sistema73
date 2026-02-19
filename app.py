@@ -1,184 +1,139 @@
 import streamlit as st
-import itertools
 import pandas as pd
-import json
-from datetime import datetime
 
-# --- CONFIGURAZIONE INTERFACCIA ---
-st.set_page_config(page_title="Betsson Pro: Master Suite", layout="wide")
+# Configuración de la página
+st.set_page_config(page_title="Sistema de Apuestas", layout="wide")
 
-# CSS Custom per migliorare l'estetica
-st.markdown("""
-    <style>
-    .stApp { background-color: #0e1117; }
-    div[data-testid="stExpander"] {
-        border: 1px solid #31333F;
-        border-radius: 10px;
-        background-color: #161b22;
-    }
-    .stMetric {
-        background-color: #1e2227;
-        padding: 15px;
-        border-radius: 10px;
-        border: 1px solid #31333F;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# --- INICIALIZACIÓN DE STATE ---
+if 'num_eventos' not in st.session_state:
+    st.session_state.num_eventos = 1
+if 'num_jugadas_sist' not in st.session_state:
+    st.session_state.num_jugadas_sist = 1
 
-# --- INIZIALIZZAZIONE STATO ---
-if "biblioteca" not in st.session_state:
-    st.session_state["biblioteca"] = {}
-if "ultimo_sistema" not in st.session_state:
-    st.session_state["ultimo_sistema"] = None
+# --- MENÚ LATERAL (Nivel 1 y 2) ---
+with st.sidebar:
+    st.header("🏆 Menú")
+    menu_principal = st.radio("Navegación:", ["🏠 Inicio", "💰 Apuestas", "📂 Mis Apuestas", "📥 Exportar"])
 
-# --- FUNZIONI CORE ---
-def genera_sistema(base_user, err_maxima, quotes, costo, ops):
-    combinazioni = itertools.product(ops, repeat=len(base_user))
-    sistema = []
-    for c in combinazioni:
-        diff = sum(1 for i in range(len(base_user)) if c[i] != base_user[i])
-        if diff <= err_maxima:
-            quota_tot = 1.0
-            for idx, s in enumerate(c):
-                quota_tot *= quotes[idx][s]
-            sistema.append({
-                "Colonna": "-".join(c),
-                "Fallos": diff,
-                "Ganancia Bruta (€)": round(quota_tot * costo, 2)
-            })
-    return pd.DataFrame(sistema)
+    sub_seccion = None
+    herramienta_sistematica = None
 
-# --- SIDEBAR: NAVIGAZIONE E CONFIGURAZIONE ---
-st.sidebar.title("🎮 Menu Principale")
-menu = st.sidebar.radio(
-    "Vai a:", 
-    ["1. Configura Partite", "2. Tabella Combinazioni", "3. Simulatore Risultati"]
-)
+    if menu_principal == "💰 Apuestas":
+        st.markdown("---")
+        sub_seccion = st.radio("Sección:", ["Jugada", "Cálculo Sistemático"])
+        
+        if sub_seccion == "Cálculo Sistemático":
+            st.markdown("---")
+            st.subheader("🛠️ Herramientas")
+            herramienta_sistematica = st.radio("Sub-opciones:", ["Jugadas", "Cálculo Columnas", "Ganancias"])
 
-st.sidebar.divider()
-st.sidebar.header("⚙️ Parametri Globali")
-num_p = st.sidebar.slider("Numero Partite", 2, 10, value=6)
-solo_ganador = st.sidebar.checkbox("Modo 2 Risultati (1-2)", value=False)
-err_max = st.sidebar.select_slider("Errori Permessi", options=list(range(num_p)), value=2)
-apuesta_col = st.sidebar.number_input("Investimento per colonna (€)", min_value=0.1, value=1.0)
+# --- LÓGICA DE SECCIONES ---
 
-opciones = ["1", "2"] if solo_ganador else ["1", "X", "2"]
-
-# --- RACCOLTA DATI (Sempre attiva in background) ---
-matriz_cuotas, col_base, equipos_local, equipos_visit = [], [], [], []
-
-# --- LOGICA DELLE PAGINE ---
-
-# ---------------------------------------------------------
-# PAGINA 1: CONFIGURAZIONE
-# ---------------------------------------------------------
-if menu == "1. Configura Partite":
-    st.title("⚽ Configurazione Partite e Quote")
-    st.info("Inserisci i nomi delle squadre, le quote e scegli la tua base.")
+# 1. SECCIÓN JUGADA (Antiguo Registro)
+if sub_seccion == "Jugada":
+    st.title("⚽ Gestión de Jugada")
     
-    for i in range(num_p):
-        with st.expander(f"🏟️ PARTITA {i+1}", expanded=True):
-            # Riga 1: Squadre
-            c_loc, c_vs, c_vis = st.columns([10, 1, 10])
-            loc = c_loc.text_input("Local", key=f"l_{i}", value=f"Local {i+1}", label_visibility="collapsed")
-            c_vs.markdown("<p style='text-align:center; padding-top:5px;'>vs</p>", unsafe_allow_html=True)
-            vis = c_vis.text_input("Visitante", key=f"v_{i}", value=f"Visitante {i+1}", label_visibility="collapsed")
-            
-            equipos_local.append(loc); equipos_visit.append(vis)
+    # Cálculo de Marcador Global (Ganados / Jugados)
+    aciertos = 0
+    for i in range(st.session_state.num_eventos):
+        r1 = st.session_state.get(f"res1_{i}", "0")
+        r2 = st.session_state.get(f"res2_{i}", "0")
+        base = st.session_state.get(f"base_{i}", "1")
+        try:
+            ir1, ir2 = int(r1), int(r2)
+            real = "1" if ir1 > ir2 else ("2" if ir1 < ir2 else "X")
+            if real == base and (ir1 > 0 or ir2 > 0): aciertos += 1
+        except: pass
 
-            # Riga 2: Quote e Base
-            if not solo_ganador:
-                q1, qx, q2, space, base_col = st.columns([1, 1, 1, 0.5, 2])
-                dq = {
-                    "1": q1.number_input("Q1", min_value=1.01, key=f"q1_{i}", value=2.0, label_visibility="collapsed"),
-                    "X": qx.number_input("QX", min_value=1.01, key=f"qx_{i}", value=3.0, label_visibility="collapsed"),
-                    "2": q2.number_input("Q2", min_value=1.01, key=f"q2_{i}", value=2.5, label_visibility="collapsed")
-                }
-                q1.caption("Q1"); qx.caption("QX"); q2.caption("Q2")
+    # Cabecera: Contador y Resultados
+    col_c1, col_c2, col_c3, col_txt, col_score = st.columns([1, 1, 1, 2, 2])
+    with col_c1:
+        if st.button("➖", key="m1") and st.session_state.num_eventos > 1:
+            st.session_state.num_eventos -= 1
+            st.rerun()
+    with col_c2:
+        st.markdown(f"### {st.session_state.num_eventos}")
+    with col_c3:
+        if st.button("➕", key="p1") and st.session_state.num_eventos < 30:
+            st.session_state.num_eventos += 1
+            st.rerun()
+    with col_txt:
+        st.markdown("### Resultados:")
+    with col_score:
+        st.markdown(f"### <span style='color:#2ecc71;'>{aciertos}</span> / {st.session_state.num_eventos}", unsafe_allow_html=True)
+
+    st.markdown("### EVENTOS")
+    
+    for i in range(st.session_state.num_eventos):
+        # Lógica de la Bolita
+        r1_val = st.session_state.get(f"res1_{i}", "0")
+        r2_val = st.session_state.get(f"res2_{i}", "0")
+        base_val = st.session_state.get(f"base_{i}", "1")
+        
+        bolita = "⚪"
+        try:
+            ir1, ir2 = int(r1_val), int(r2_val)
+            if ir1 == 0 and ir2 == 0: bolita = "⚪"
             else:
-                q1, q2, space, base_col = st.columns([1, 1, 1.5, 2])
-                dq = {
-                    "1": q1.number_input("Q1", min_value=1.01, key=f"q1_{i}", value=2.0, label_visibility="collapsed"),
-                    "2": q2.number_input("Q2", min_value=1.01, key=f"q2_{i}", value=2.5, label_visibility="collapsed")
-                }
-                q1.caption("Q1"); q2.caption("Q2")
-            
-            b = base_col.selectbox("Base", opciones, key=f"b_{i}")
-            col_base.append(b)
-            matriz_cuotas.append(dq)
+                real = "1" if ir1 > ir2 else ("2" if ir1 < ir2 else "X")
+                bolita = "🟢" if real == base_val else "🔴"
+        except: pass
 
-    st.success("Configurazione completata. Vai alla sezione 'Tabella Combinazioni' per calcolare.")
+        # FILA 1: Info General + Bolita
+        f1c1, f1c2, f1c3, f1c4, f1c5 = st.columns([1.5, 3, 2, 1.5, 1])
+        with f1c1: st.selectbox(f"Deporte", ["⚽", "🏀", "🎾", "🥊"], key=f"dep_{i}")
+        with f1c2: st.text_input(f"Evento", placeholder="Liga/Torneo", key=f"tipo_{i}")
+        with f1c3: st.date_input(f"Fecha", key=f"fec_{i}")
+        with f1c4: st.text_input(f"Hora", value="20:00", key=f"hor_{i}")
+        with f1c5: st.markdown(f"## {bolita}")
 
-# ---------------------------------------------------------
-# PAGINA 2: TABELLA COMBINAZIONI
-# ---------------------------------------------------------
-elif menu == "2. Tabella Combinazioni":
-    st.title("📊 Analisi e Redditività del Sistema")
-    
-    # Dobbiamo rigenerare le liste per il calcolo se siamo in questa pagina
-    for i in range(num_p):
-        equipos_local.append(st.session_state.get(f"l_{i}"))
-        col_base.append(st.session_state.get(f"b_{i}"))
-        dq = {"1": st.session_state.get(f"q1_{i}"), "2": st.session_state.get(f"q2_{i}")}
-        if not solo_ganador: dq["X"] = st.session_state.get(f"qx_{i}")
-        matriz_cuotas.append(dq)
+        # FILA 2: Marcador, Cuotas y Base
+        f2c1, f2r1, f2r2, f2c2, f2c3, f2c4, f2c5, f2c6 = st.columns([2, 0.7, 0.7, 2, 0.8, 0.8, 0.8, 1.2])
+        with f2c1: st.text_input("Local", key=f"e1_{i}")
+        with f2r1: st.text_input("R1", key=f"res1_{i}", value="0")
+        with f2r2: st.text_input("R2", key=f"res2_{i}", value="0")
+        with f2c2: st.text_input("Visitante", key=f"e2_{i}")
+        with f2c3: st.number_input("C1", min_value=1.0, step=0.01, key=f"c1_{i}")
+        with f2c4: st.number_input("CX", min_value=1.0, step=0.01, key=f"cx_{i}")
+        with f2c5: st.number_input("C2", min_value=1.0, step=0.01, key=f"c2_{i}")
+        with f2c6: st.selectbox("Base", ["1", "X", "2"], key=f"base_{i}")
+        st.markdown("---")
 
-    if st.button("🚀 Calcola Sistema", type="primary", use_container_width=True):
-        df = genera_sistema(col_base, err_max, matriz_cuotas, apuesta_col, opciones)
-        st.session_state["ultimo_sistema"] = df
-        st.session_state["costo_tot"] = len(df) * apuesta_col
-
-    if st.session_state["ultimo_sistema"] is not None:
-        df = st.session_state["ultimo_sistema"].copy()
-        costo = st.session_state["costo_tot"]
-        df["Ganancia Neta (€)"] = df["Ganancia Bruta (€)"] - costo
+# 2. SECCIÓN CÁLCULO SISTEMÁTICO (Sub-niveles)
+elif sub_seccion == "Cálculo Sistemático":
+    if herramienta_sistematica == "Jugadas":
+        st.title("📂 Definición de Jugadas")
         
-        c1, c2, c3 = st.columns(3)
-        c1.metric("N. Colonne", len(df))
-        c2.metric("Costo Totale", f"{costo:.2f} €")
-        c3.metric("Max Vincita Neta", f"{df['Ganancia Neta (€)'].max():.2f} €")
+        # Contador específico para Jugadas Sistemáticas
+        col_s1, col_s2, col_s3 = st.columns([1, 1, 1])
+        with col_s1:
+            if st.button("➖", key="sm") and st.session_state.num_jugadas_sist > 1:
+                st.session_state.num_jugadas_sist -= 1
+                st.rerun()
+        with col_s2:
+            st.markdown(f"<h2 style='text-align:center;'>{st.session_state.num_jugadas_sist}</h2>", unsafe_allow_html=True)
+        with col_s3:
+            if st.button("➕", key="sp") and st.session_state.num_jugadas_sist < 30:
+                st.session_state.num_jugadas_sist += 1
+                st.rerun()
 
-        st.dataframe(df.style.format({
-            "Ganancia Bruta (€)": "{:.2f} €",
-            "Ganancia Neta (€)": "{:.2f} €"
-        }), use_container_width=True, hide_index=True)
+        st.markdown("---")
+        for j in range(st.session_state.num_jugadas_sist):
+            sc1, sc2, sc3, sc4 = st.columns([0.5, 3, 1, 1])
+            with sc1: st.write(f"#{j+1}")
+            with sc2: st.text_input("Partido", key=f"sist_ev_{j}")
+            with sc3: st.number_input("Cuota", key=f"sist_cuo_{j}", min_value=1.0)
+            with sc4: st.selectbox("Pronóstico", ["1", "X", "2"], key=f"sist_base_{j}")
 
-# ---------------------------------------------------------
-# PAGINA 3: SIMULATORE
-# ---------------------------------------------------------
-elif menu == "3. Simulatore Risultati":
-    st.title("🎯 Verifica Risultati Reali")
-    
-    res_sim = []
-    for i in range(num_p):
-        loc = st.session_state.get(f"l_{i}", f"Squadra A{i}")
-        vis = st.session_state.get(f"v_{i}", f"Squadra B{i}")
-        base_scelta = st.session_state.get(f"b_{i}", "1")
+    elif herramienta_sistematica == "Cálculo Columnas":
+        st.title("📋 Cálculo de Columnas")
+        st.info("Aquí se procesarán las combinaciones de los eventos definidos.")
 
-        c1, c2, c3, c4, c5, c6 = st.columns([3, 1, 0.5, 1, 3, 1.5])
-        
-        c1.markdown(f"<p style='text-align: right; padding-top: 25px;'><b>{loc}</b></p>", unsafe_allow_html=True)
-        gl = c2.number_input("L", min_value=0, step=1, key=f"sim_gl_{i}", label_visibility="collapsed")
-        c3.markdown("<p style='text-align: center; padding-top: 25px;'>-</p>", unsafe_allow_html=True)
-        gv = c4.number_input("V", min_value=0, step=1, key=f"sim_gv_{i}", label_visibility="collapsed")
-        c5.markdown(f"<p style='text-align: left; padding-top: 25px;'><b>{vis}</b></p>", unsafe_allow_html=True)
-        
-        if solo_ganador: s_auto = "1" if gl > gv else "2"
-        else: s_auto = "1" if gl > gv else ("2" if gv > gl else "X")
-        res_sim.append(s_auto)
-        
-        color = "🟢" if s_auto == base_scelta else "🔴"
-        c6.markdown(f"<div style='padding-top: 25px;'><b>{s_auto}</b> {color}</div>", unsafe_allow_html=True)
+    elif herramienta_sistematica == "Ganancias":
+        st.title("💰 Ganancias")
+        st.write("Cálculo del retorno basado en las cuotas seleccionadas.")
 
-    # Verifica finale
-    if st.button("💰 Verifica Vincita Totale"):
-        colonna_risultato = "-".join(res_sim)
-        df_inv = st.session_state.get("ultimo_sistema")
-        if df_inv is not None:
-            vincita = df_inv[df_inv["Colonna"] == colonna_risultato]
-            if not vincita.empty:
-                val = vincita.iloc[0]["Ganancia Bruta (€)"]
-                st.balloons()
-                st.success(f"HAI VINTO! Incasso: {val:.2f} €")
-            else:
-                st.error("Colonna non presente nel sistema (troppi errori).")
+# 3. OTROS (Inicio)
+elif menu_principal == "🏠 Inicio":
+    st.title("Bienvenido a tu App de Apuestas")
+    st.write("Selecciona '💰 Apuestas' para empezar.")
