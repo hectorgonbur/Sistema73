@@ -1,129 +1,163 @@
 import streamlit as st
+import itertools
 import pandas as pd
 import sqlite3
-import itertools
+import json
+import io
 from datetime import datetime
 
-# ==========================================
-# 1. CONFIGURACIÓN Y BASE DE DATOS
-# ==========================================
-st.set_page_config(page_title="Betting Pro v10 - Cuotas 1X2", layout="wide")
+# --- CONFIGURACIÓN DE LA PÁGINA ---
+st.set_page_config(page_title="App de Apuestas Pro - v10 Master", layout="wide")
 
+# --- LÓGICA DE BASE DE DATOS (ACTUALIZADA CON STATS) ---
 def init_db():
     conn = sqlite3.connect('apuestas_master.db')
     c = conn.cursor()
-    c.execute('CREATE TABLE IF NOT EXISTS historial (id INTEGER PRIMARY KEY AUTOINCREMENT, fecha TEXT, tipo TEXT, inversion REAL, neto REAL)')
+    c.execute('CREATE TABLE IF NOT EXISTS jugadas (nombre TEXT PRIMARY KEY, datos TEXT)')
+    c.execute('''CREATE TABLE IF NOT EXISTS historial 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, fecha TEXT, deporte TEXT, 
+                  inversion REAL, neto REAL, resultado TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS stats_equipos 
                  (equipo TEXT, deporte TEXT, liga TEXT, apostado INTEGER, aciertos INTEGER, desaciertos INTEGER,
                   PRIMARY KEY (equipo, deporte, liga))''')
     conn.commit()
     conn.close()
 
+def registrar_stats_bilateral(local, visitante, base, resultado_real, deporte, liga):
+    conn = sqlite3.connect('apuestas_master.db')
+    c = conn.cursor()
+    for eq in [local, visitante]:
+        c.execute('INSERT OR IGNORE INTO stats_equipos VALUES (?, ?, ?, 0, 0, 0)', (eq, deporte, liga))
+        c.execute('UPDATE stats_equipos SET apostado = apostado + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (eq, deporte, liga))
+    
+    acerto_base = (base == resultado_real)
+    if base == "1":
+        if acerto_base:
+            c.execute('UPDATE stats_equipos SET aciertos = aciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (local, deporte, liga))
+            c.execute('UPDATE stats_equipos SET desaciertos = desaciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (visitante, deporte, liga))
+        else:
+            c.execute('UPDATE stats_equipos SET desaciertos = desaciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (local, deporte, liga))
+            if resultado_real == "2": c.execute('UPDATE stats_equipos SET aciertos = aciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (visitante, deporte, liga))
+    elif base == "2":
+        if acerto_base:
+            c.execute('UPDATE stats_equipos SET aciertos = aciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (visitante, deporte, liga))
+            c.execute('UPDATE stats_equipos SET desaciertos = desaciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (local, deporte, liga))
+        else:
+            c.execute('UPDATE stats_equipos SET desaciertos = desaciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (visitante, deporte, liga))
+            if resultado_real == "1": c.execute('UPDATE stats_equipos SET aciertos = aciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (local, deporte, liga))
+    conn.commit(); conn.close()
+
 init_db()
 
-# ==========================================
-# 2. COMPONENTE: EVENTO CON CUOTAS 1, X, 2
-# ==========================================
-def renderizar_evento(id_evento, prefijo=""):
-    with st.expander(f"📌 Evento {prefijo} #{id_evento + 1}", expanded=True):
-        # Fila 1: Jerarquía
-        c1, c2 = st.columns([2, 2])
-        dep = c1.selectbox("Deporte", ["⚽ Fútbol", "🏀 Basket", "🎾 Tenis"], key=f"{prefijo}_dep_{id_evento}")
-        liga = c2.text_input("Liga", key=f"{prefijo}_liga_{id_evento}", placeholder="Ej: Premier League")
-        
-        # Fila 2: Equipos
-        l = st.columns(2)[0].text_input("Local", key=f"{prefijo}_l_{id_evento}")
-        v = st.columns(2)[1].text_input("Visitante", key=f"{prefijo}_v_{id_evento}")
-        
-        # Fila 3: LAS 3 CUOTAS DE RESULTADO (1, X, 2)
-        st.write("**💰 Cuotas del Mercado**")
-        q1, qx, q2 = st.columns(3)
-        cuo1 = q1.number_input("Cuota Local (1)", 1.0, value=2.0, step=0.01, key=f"{prefijo}_q1_{id_evento}")
-        
-        # La cuota X solo se muestra si es Fútbol
-        if dep == "⚽ Fútbol":
-            cuox = qx.number_input("Cuota Empate (X)", 1.0, value=3.2, step=0.01, key=f"{prefijo}_qx_{id_evento}")
-        else:
-            cuox = 1.0 # Valor nulo para otros deportes
-            qx.write("N/A")
-            
-        cuo2 = q2.number_input("Cuota Visitante (2)", 1.0, value=2.5, step=0.01, key=f"{prefijo}_q2_{id_evento}")
-        
-        # Fila 4: Pronóstico y Marcador
-        st.write("---")
-        p1, p2, p3 = st.columns([2, 1, 1])
-        opciones = ["1", "X", "2"] if dep == "⚽ Fútbol" else ["1", "2"]
-        base = p1.selectbox("Tu Apuesta (Base)", opciones, key=f"{prefijo}_base_{id_evento}")
-        
-        # Selección automática de la cuota según la base elegida
-        if base == "1": cuota_elegida = cuo1
-        elif base == "X": cuota_elegida = cuox
-        else: cuota_elegida = cuo2
-        
-        st.info(f"Seleccionada Cuota **{base}**: {cuota_elegida}")
-        
-        r1 = p2.number_input("Goles L", 0, key=f"{prefijo}_r1_{id_evento}")
-        r2 = p3.number_input("Goles V", 0, key=f"{prefijo}_r2_{id_evento}")
-        
-        return {"l": l, "v": v, "cuo": cuota_elegida, "base": base, "dep": dep, "liga": liga, "r1": r1, "r2": r2}
+# --- INICIALIZACIÓN DE VARIABLES ---
+if 'num_eventos_simple' not in st.session_state: st.session_state.num_eventos_simple = 1
 
-# ==========================================
-# 3. NAVEGACIÓN
-# ==========================================
+# --- MENÚ LATERAL (REDISEÑADO V10) ---
 with st.sidebar:
     st.title("🏆 Betting Pro v10")
-    menu = st.radio("Secciones", ["🏠 Inicio", "🎯 Jugada Simple", "⚙️ Sistemas Combinados", "📊 Estadísticas"])
+    menu = st.radio("Navegación:", ["🏠 Inicio", "🎯 Jugada Simple", "⚙️ Sistemas", "🧮 Arbitraje", "📊 Estadísticas"])
+    
+    st.markdown("---")
+    st.header("💾 Gestión de Sesiones")
+    nombre_arch = st.text_input("Nombre de jugada", placeholder="Ej: Finde Premier")
+    if st.button("📁 Guardar Todo"):
+        if nombre_arch:
+            datos_serializables = {k: v for k, v in st.session_state.items() if not k.startswith('_')}
+            conn = sqlite3.connect('apuestas_master.db')
+            conn.execute("INSERT OR REPLACE INTO jugadas VALUES (?, ?)", (nombre_arch, json.dumps(datos_serializables, default=str)))
+            conn.commit(); conn.close()
+            st.success("Guardado.")
 
-# ==========================================
-# 4. SECCIÓN: JUGADA SIMPLE
-# ==========================================
+# --- CONTENIDO: JUGADA SIMPLE (CON CUOTAS 1X2) ---
 if menu == "🎯 Jugada Simple":
-    st.header("🎯 Registro de Jugada Simple")
-    datos = renderizar_evento(0, "simple")
+    st.title("🎯 Jugada Simple con Cuotas 1X2")
     
+    c1, c2, c3 = st.columns([1, 1, 3])
+    with c1: 
+        if st.button("➖") and st.session_state.num_eventos_simple > 1:
+            st.session_state.num_eventos_simple -= 1; st.rerun()
+    with c3:
+        if st.button("➕"):
+            st.session_state.num_eventos_simple += 1; st.rerun()
+
+    eventos_simples = []
+    for i in range(st.session_state.num_eventos_simple):
+        with st.expander(f"Evento #{i+1}", expanded=True):
+            f1, f2, f3 = st.columns([1.5, 2, 2])
+            dep = f1.selectbox("Deporte", ["⚽ Fútbol", "🎾 Tenis", "🏀 Basket"], key=f"sim_dep_{i}")
+            liga = f2.text_input("Liga", key=f"sim_liga_{i}")
+            
+            # Equipos y Marcador
+            fl, fr1, fr2, fv = st.columns([2, 0.7, 0.7, 2])
+            local = fl.text_input("Local", key=f"sim_l_{i}")
+            r1 = fr1.number_input("R1", 0, key=f"sim_r1_{i}")
+            r2 = fr2.number_input("R2", 0, key=f"sim_r2_{i}")
+            visitante = fv.text_input("Visitante", key=f"sim_v_{i}")
+            
+            # Cuotas 1 X 2 (Lo que pediste)
+            st.markdown("**💰 Cuotas de Resultado**")
+            q1, qx, q2, qsel = st.columns([1, 1, 1, 1.5])
+            cuo1 = q1.number_input("Cuota 1", 1.0, value=2.0, key=f"sim_c1_{i}")
+            cuox = qx.number_input("Cuota X", 1.0, value=3.0, key=f"sim_cx_{i}") if dep == "⚽ Fútbol" else 1.0
+            cuo2 = q2.number_input("Cuota 2", 1.0, value=2.0, key=f"sim_c2_{i}")
+            
+            base = qsel.selectbox("Tu Apuesta", ["1", "X", "2"] if dep == "⚽ Fútbol" else ["1", "2"], key=f"sim_base_{i}")
+            
+            c_escogida = cuo1 if base=="1" else (cuox if base=="X" else cuo2)
+            st.caption(f"Cuota seleccionada: {c_escogida}")
+            eventos_simples.append({"l": local, "v": visitante, "cuo": c_escogida, "base": base, "dep": dep, "liga": liga, "r1": r1, "r2": r2})
+
     st.markdown("---")
-    inv = st.number_input("Inversión ($)", 1.0, value=10.0)
-    retorno = inv * datos["cuo"]
-    st.metric("Retorno Potencial", f"${retorno:.2f}", f"Cuota: {datos['cuo']}")
+    st.subheader("💰 Resumen de Jugada Simple")
+    inv = st.number_input("Inversión Total ($)", 1.0, value=10.0)
     
-    if st.button("🔥 REGISTRAR APUESTA"):
-        st.balloons()
-        st.success(f"Apuesta al '{datos['base']}' registrada con éxito.")
-
-# ==========================================
-# 5. SECCIÓN: SISTEMAS (K de N)
-# ==========================================
-elif menu == "⚙️ Sistemas Combinados":
-    st.header("⚙️ Gestión de Sistemas")
-    if 'n_sis' not in st.session_state: st.session_state.n_sis = 2
+    cuota_final = 1.0
+    for ev in eventos_simples: cuota_final *= ev["cuo"]
     
-    c_add, c_rem, _ = st.columns([0.5, 0.5, 5])
-    if c_add.button("➕"): st.session_state.n_sis += 1; st.rerun()
-    if c_rem.button("➖") and st.session_state.n_sis > 1: st.session_state.n_sis -= 1; st.rerun()
+    st.metric("Retorno Bruto", f"${(inv * cuota_final):.2f}", f"Cuota Total: {cuota_final:.2f}")
 
-    eventos = []
-    for i in range(st.session_state.n_sis):
-        eventos.append(renderizar_evento(i, "sis"))
+    if st.button("🔥 REGISTRAR TODO", use_container_width=True):
+        for e in eventos_simples:
+            res_r = "1" if e['r1'] > e['r2'] else ("2" if e['r1'] < e['r2'] else "X")
+            registrar_stats_bilateral(e['l'], e['v'], e['base'], res_r, e['dep'], e['liga'])
+        st.success("Estadísticas y jugadas registradas.")
 
-    st.markdown("---")
-    k = st.number_input("Sistema (K de N)", 1, st.session_state.n_sis, st.session_state.n_sis)
-    inv_total = st.number_input("Inversión Total ($)", 1.0, value=20.0)
+# --- CONTENIDO: ARBITRAJE (NUEVA SECCIÓN) ---
+elif menu == "🧮 Arbitraje":
+    st.title("🧮 Calculadora de Arbitraje (Surebet)")
+    st.info("Calcula el beneficio asegurado comparando dos resultados opuestos.")
+    ca, cb = st.columns(2)
+    c_a = ca.number_input("Cuota Resultado A", 1.01, value=2.10)
+    c_b = cb.number_input("Cuota Resultado B", 1.01, value=2.10)
+    inv_arb = st.number_input("Inversión a repartir ($)", 1.0, value=100.0)
     
-    combis = list(itertools.combinations(eventos, k))
-    inv_col = inv_total / len(combis)
-    
-    with st.expander("📋 Desglose de Columnas del Sistema"):
-        res = []
-        for idx, combo in enumerate(combis):
-            c_tot = 1.0
-            for e in combo: c_tot *= e['cuo']
-            res.append({"Columna": f"#{idx+1}", "Cuota": round(c_tot, 2), "Paga ($)": round(c_tot * inv_col, 2)})
-        st.table(pd.DataFrame(res))
+    prob = (1/c_a) + (1/c_b)
+    if prob < 1:
+        st.success(f"✅ Arbitraje: {((1-prob)*100):.2f}% de ganancia.")
+        st.write(f"Apostar A: **${(inv_arb/(prob*c_a)):.2f}** | Apostar B: **${(inv_arb/(prob*c_b)):.2f}**")
+    else: st.error("No hay arbitraje en estas cuotas.")
 
+# --- CONTENIDO: ESTADÍSTICAS ---
 elif menu == "📊 Estadísticas":
-    st.header("📊 Análisis de Rendimiento")
-    st.write("Filtra por Deporte, Liga y Equipo para ver tu efectividad.")
+    st.title("📊 Rendimiento por Ligas y Equipos")
+    conn = sqlite3.connect('apuestas_master.db')
+    df = pd.read_sql_query("SELECT * FROM stats_equipos", conn); conn.close()
+    
+    if not df.empty:
+        c_dep, c_lig, c_bus = st.columns([1, 1, 2])
+        sel_d = c_dep.selectbox("Deporte", ["Todos"] + df['deporte'].unique().tolist())
+        df_f = df[df['deporte'] == sel_d] if sel_d != "Todos" else df
+        
+        sel_l = c_lig.selectbox("Liga", ["Todas"] + df_f['liga'].unique().tolist())
+        df_f = df_f[df_f['liga'] == sel_l] if sel_l != "Todas" else df_f
+        
+        bus = c_bus.text_input("Buscar Equipo...")
+        if bus: df_f = df_f[df_f['equipo'].str.contains(bus, case=False)]
+        
+        st.dataframe(df_f, use_container_width=True, hide_index=True)
+    else: st.info("Sin datos registrados.")
 
+# --- INICIO ---
 elif menu == "🏠 Inicio":
-    st.title("Betting Manager Pro v10")
-    st.write("Registra eventos usando las cuotas de Local, Empate o Visitante.")
+    st.title("🚀 Betting Manager v10")
+    st.write("Bienvenido al sistema profesional. Usa el menú lateral para navegar.")
