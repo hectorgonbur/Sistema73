@@ -1,260 +1,163 @@
 import streamlit as st
 import itertools
 import pandas as pd
+import sqlite3
 import json
+import io
 from datetime import datetime
 
-# --- CONFIGURACIÓN E INTERFAZ ---
-st.set_page_config(page_title="Betsson Pro: Master Suite", layout="wide")
-st.title("⚽ Betsson Pro: Sistema Profesional (2-10 Partidos)")
+# --- CONFIGURACIÓN DE LA PÁGINA ---
+st.set_page_config(page_title="App de Apuestas Pro - v10 Master", layout="wide")
 
-# --- INICIALIZACIÓN DE ESTADO (MEMORIA) ---
-if "biblioteca" not in st.session_state:
-    st.session_state["biblioteca"] = {} 
+# --- LÓGICA DE BASE DE DATOS (ACTUALIZADA CON STATS) ---
+def init_db():
+    conn = sqlite3.connect('apuestas_master.db')
+    c = conn.cursor()
+    c.execute('CREATE TABLE IF NOT EXISTS jugadas (nombre TEXT PRIMARY KEY, datos TEXT)')
+    c.execute('''CREATE TABLE IF NOT EXISTS historial 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, fecha TEXT, deporte TEXT, 
+                  inversion REAL, neto REAL, resultado TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS stats_equipos 
+                 (equipo TEXT, deporte TEXT, liga TEXT, apostado INTEGER, aciertos INTEGER, desaciertos INTEGER,
+                  PRIMARY KEY (equipo, deporte, liga))''')
+    conn.commit()
+    conn.close()
 
-# --- FUNCIONES DE GESTIÓN DE DATOS ---
-def cargar_datos_en_session_state(datos):
-    st.session_state["num_p_slider"] = datos.get("num_p", 6)
-    st.session_state["solo_ganador_check"] = datos.get("solo_ganador", False)
-    st.session_state["err_max_slider"] = datos.get("err_max", 2)
-    st.session_state["apuesta_input"] = datos.get("apuesta_col", 1.0)
+def registrar_stats_bilateral(local, visitante, base, resultado_real, deporte, liga):
+    conn = sqlite3.connect('apuestas_master.db')
+    c = conn.cursor()
+    for eq in [local, visitante]:
+        c.execute('INSERT OR IGNORE INTO stats_equipos VALUES (?, ?, ?, 0, 0, 0)', (eq, deporte, liga))
+        c.execute('UPDATE stats_equipos SET apostado = apostado + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (eq, deporte, liga))
     
-    if "biblioteca" in datos:
-        st.session_state["biblioteca"] = datos["biblioteca"]
-
-    num = datos.get("num_p", 6)
-    for i in range(num):
-        try:
-            st.session_state[f"c_{i}"] = datos["competiciones"][i]
-            st.session_state[f"l_{i}"] = datos["local"][i]
-            st.session_state[f"v_{i}"] = datos["visit"][i]
-            st.session_state[f"b_{i}"] = datos["base"][i]
-            
-            opciones_carga = ["1", "2"] if datos.get("solo_ganador") else ["1", "X", "2"]
-            for op in opciones_carga:
-                st.session_state[f"q_{op}_{i}"] = datos["cuotas"][i].get(op, 1.0)
-        except IndexError:
-            pass
-
-def genera_sistema(base_user, err_maxima, quotes, costo, ops):
-    combinazioni = itertools.product(ops, repeat=len(base_user))
-    sistema = []
-    
-    for c in combinazioni:
-        diff = sum(1 for i in range(len(base_user)) if c[i] != base_user[i])
-        
-        # Filtro de errores
-        if diff <= err_maxima:
-            quota_tot = 1.0
-            for idx, s in enumerate(c):
-                quota_tot *= quotes[idx][s]
-            
-            # --- CAMBIO: ELIMINADA LA COLUMNA "QUOTA TOTAL" ---
-            # Nos quedamos solo con el dinero, que es lo que importa.
-            sistema.append({
-                "Columna": "-".join(c),
-                "Fallos": diff,
-                "Ganancia Bruta (€)": round(quota_tot * costo, 2)
-            })
-    return pd.DataFrame(sistema)
-
-# --- BARRA LATERAL: ARCHIVOS ---
-st.sidebar.header("📂 Gestión de Archivos")
-archivo_subido = st.sidebar.file_uploader("Cargar Jugada/Historial", type=["json"])
-
-if archivo_subido is not None:
-    try:
-        datos_cargados = json.load(archivo_subido)
-        if st.sidebar.button("🔄 Restaurar Todo"):
-            cargar_datos_en_session_state(datos_cargados)
-            st.toast("Datos restaurados.", icon="✅")
-            st.rerun()
-    except Exception as e:
-        st.sidebar.error(f"Error: {e}")
-
-st.sidebar.divider()
-
-# --- CONFIGURACIÓN PARAMETROS ---
-st.sidebar.header("⚙️ Configuración")
-num_p = st.sidebar.slider("Partidos", 2, 10, key="num_p_slider", value=6)
-solo_ganador = st.sidebar.checkbox("Modo 2 Resultados", key="solo_ganador_check", value=False)
-err_max = st.sidebar.select_slider("Errores permitidos", options=[0, 1, 2, 3, 4, 5], key="err_max_slider", value=2)
-apuesta_col = st.sidebar.number_input("Inversión por columna (€)", min_value=0.1, key="apuesta_input", value=1.0)
-
-opciones = ["1", "2"] if solo_ganador else ["1", "X", "2"]
-
-# --- GRID DE ENTRADA ---
-st.subheader("1. Definir Partidos y Cuotas")
-matriz_cuotas, col_base, equipos_local, equipos_visit, competiciones = [], [], [], [], []
-
-grid = st.columns(2)
-for i in range(num_p):
-    with grid[i % 2]:
-        with st.expander(f"PARTIDO {i+1}", expanded=True):
-            comp = st.text_input("Torneo", key=f"c_{i}", value="Liga")
-            competiciones.append(comp)
-            
-            c_l, c_v = st.columns(2)
-            loc = c_l.text_input("Local", key=f"l_{i}", value=f"Local {i+1}")
-            vis = c_v.text_input("Visitante", key=f"v_{i}", value=f"Visitante {i+1}")
-            equipos_local.append(loc); equipos_visit.append(vis)
-
-            c_b, c_qs = st.columns([1, 3])
-            b = c_b.selectbox("Base", opciones, key=f"b_{i}")
-            col_base.append(b)
-            
-            q_cols = c_qs.columns(len(opciones))
-            d_q = {}
-            for j, op in enumerate(opciones):
-                val_q = q_cols[j].number_input(f"Q{op}", min_value=1.01, key=f"q_{op}_{i}", value=2.0)
-                d_q[op] = val_q
-            matriz_cuotas.append(d_q)
-
-# --- CÁLCULO Y VISUALIZACIÓN DEL SISTEMA ---
-st.divider()
-st.subheader("2. Tabla de Combinaciones y Ganancias")
-
-if st.button("📊 Calcular Rentabilidad", type="primary"):
-    with st.spinner('Procesando matemáticas...'):
-        # 1. Generamos el sistema
-        df_sistema = genera_sistema(col_base, err_max, matriz_cuotas, apuesta_col, opciones)
-        
-        # 2. Calculamos el Costo Total
-        spesa_totale = len(df_sistema) * apuesta_col
-        
-        # 3. Calculamos Ganancia Neta
-        if not df_sistema.empty:
-            df_sistema["Ganancia Neta (€)"] = df_sistema["Ganancia Bruta (€)"] - spesa_totale
-        
-        # Métricas
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Columnas", len(df_sistema))
-        c2.metric("Costo del Sistema", f"{spesa_totale:.2f} €")
-        
-        if not df_sistema.empty:
-            max_neto = df_sistema["Ganancia Neta (€)"].max()
-            c3.metric("Mejor Ganancia Neta", f"{max_neto:.2f} €", delta_color="normal" if max_neto > 0 else "inverse")
-        
-        # TABLA (LIMPIA, SIN QUOTA TOTAL)
-        if not df_sistema.empty:
-            st.dataframe(
-                df_sistema.style.format({
-                    "Ganancia Bruta (€)": "{:.2f} €",
-                    "Ganancia Neta (€)": "{:.2f} €"
-                }),
-                use_container_width=True,
-                height=400,
-                hide_index=True # Ocultamos el índice numérico para ganar más espacio
-            )
+    acerto_base = (base == resultado_real)
+    if base == "1":
+        if acerto_base:
+            c.execute('UPDATE stats_equipos SET aciertos = aciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (local, deporte, liga))
+            c.execute('UPDATE stats_equipos SET desaciertos = desaciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (visitante, deporte, liga))
         else:
-            st.warning("No se generaron columnas con esa configuración.")
+            c.execute('UPDATE stats_equipos SET desaciertos = desaciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (local, deporte, liga))
+            if resultado_real == "2": c.execute('UPDATE stats_equipos SET aciertos = aciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (visitante, deporte, liga))
+    elif base == "2":
+        if acerto_base:
+            c.execute('UPDATE stats_equipos SET aciertos = aciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (visitante, deporte, liga))
+            c.execute('UPDATE stats_equipos SET desaciertos = desaciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (local, deporte, liga))
+        else:
+            c.execute('UPDATE stats_equipos SET desaciertos = desaciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (visitante, deporte, liga))
+            if resultado_real == "1": c.execute('UPDATE stats_equipos SET aciertos = aciertos + 1 WHERE equipo = ? AND deporte = ? AND liga = ?', (local, deporte, liga))
+    conn.commit(); conn.close()
+
+init_db()
+
+# --- INICIALIZACIÓN DE VARIABLES ---
+if 'num_eventos_simple' not in st.session_state: st.session_state.num_eventos_simple = 1
+
+# --- MENÚ LATERAL (REDISEÑADO V10) ---
+with st.sidebar:
+    st.title("🏆 Betting Pro v10")
+    menu = st.radio("Navegación:", ["🏠 Inicio", "🎯 Jugada Simple", "⚙️ Sistemas", "🧮 Arbitraje", "📊 Estadísticas"])
+    
+    st.markdown("---")
+    st.header("💾 Gestión de Sesiones")
+    nombre_arch = st.text_input("Nombre de jugada", placeholder="Ej: Finde Premier")
+    if st.button("📁 Guardar Todo"):
+        if nombre_arch:
+            datos_serializables = {k: v for k, v in st.session_state.items() if not k.startswith('_')}
+            conn = sqlite3.connect('apuestas_master.db')
+            conn.execute("INSERT OR REPLACE INTO jugadas VALUES (?, ?)", (nombre_arch, json.dumps(datos_serializables, default=str)))
+            conn.commit(); conn.close()
+            st.success("Guardado.")
+
+# --- CONTENIDO: JUGADA SIMPLE (CON CUOTAS 1X2) ---
+if menu == "🎯 Jugada Simple":
+    st.title("🎯 Jugada Simple con Cuotas 1X2")
+    
+    c1, c2, c3 = st.columns([1, 1, 3])
+    with c1: 
+        if st.button("➖") and st.session_state.num_eventos_simple > 1:
+            st.session_state.num_eventos_simple -= 1; st.rerun()
+    with c3:
+        if st.button("➕"):
+            st.session_state.num_eventos_simple += 1; st.rerun()
+
+    eventos_simples = []
+    for i in range(st.session_state.num_eventos_simple):
+        with st.expander(f"Evento #{i+1}", expanded=True):
+            f1, f2, f3 = st.columns([1.5, 2, 2])
+            dep = f1.selectbox("Deporte", ["⚽ Fútbol", "🎾 Tenis", "🏀 Basket"], key=f"sim_dep_{i}")
+            liga = f2.text_input("Liga", key=f"sim_liga_{i}")
             
-        st.session_state["ultimo_sistema"] = df_sistema
-        st.session_state["spesa_totale"] = spesa_totale
+            # Equipos y Marcador
+            fl, fr1, fr2, fv = st.columns([2, 0.7, 0.7, 2])
+            local = fl.text_input("Local", key=f"sim_l_{i}")
+            r1 = fr1.number_input("R1", 0, key=f"sim_r1_{i}")
+            r2 = fr2.number_input("R2", 0, key=f"sim_r2_{i}")
+            visitante = fv.text_input("Visitante", key=f"sim_v_{i}")
+            
+            # Cuotas 1 X 2 (Lo que pediste)
+            st.markdown("**💰 Cuotas de Resultado**")
+            q1, qx, q2, qsel = st.columns([1, 1, 1, 1.5])
+            cuo1 = q1.number_input("Cuota 1", 1.0, value=2.0, key=f"sim_c1_{i}")
+            cuox = qx.number_input("Cuota X", 1.0, value=3.0, key=f"sim_cx_{i}") if dep == "⚽ Fútbol" else 1.0
+            cuo2 = q2.number_input("Cuota 2", 1.0, value=2.0, key=f"sim_c2_{i}")
+            
+            base = qsel.selectbox("Tu Apuesta", ["1", "X", "2"] if dep == "⚽ Fútbol" else ["1", "2"], key=f"sim_base_{i}")
+            
+            c_escogida = cuo1 if base=="1" else (cuox if base=="X" else cuo2)
+            st.caption(f"Cuota seleccionada: {c_escogida}")
+            eventos_simples.append({"l": local, "v": visitante, "cuo": c_escogida, "base": base, "dep": dep, "liga": liga, "r1": r1, "r2": r2})
 
-elif "ultimo_sistema" in st.session_state:
-    df = st.session_state["ultimo_sistema"]
-    spesa = st.session_state.get("spesa_totale", 0)
+    st.markdown("---")
+    st.subheader("💰 Resumen de Jugada Simple")
+    inv = st.number_input("Inversión Total ($)", 1.0, value=10.0)
     
-    st.info(f"Mostrando último cálculo (Costo: {spesa:.2f} €)")
-    st.dataframe(
-        df.style.format({
-            "Ganancia Bruta (€)": "{:.2f} €",
-            "Ganancia Neta (€)": "{:.2f} €"
-        }),
-        use_container_width=True,
-        hide_index=True
-    )
-
-# --- SIMULADOR DE RESULTADOS ---
-st.divider()
-st.subheader("3. Simulador de Resultados Reales")
-st.info("Ingresa los resultados para ver si ganaste dinero real.")
-
-res_sim, goles_l, goles_v = [], [], []
-cols_sim = st.columns(num_p)
-
-for i in range(num_p):
-    with cols_sim[i]: 
-        st.caption(f"{equipos_local[i]} vs {equipos_visit[i]}")
-        c_gl, c_gv = st.columns(2)
-        gl = c_gl.number_input("L", min_value=0, step=1, key=f"sim_gl_{i}")
-        gv = c_gv.number_input("V", min_value=0, step=1, key=f"sim_gv_{i}")
-        goles_l.append(gl); goles_v.append(gv)
-        
-        if solo_ganador: s_auto = "1" if gl > gv else "2"
-        else: s_auto = "1" if gl > gv else ("2" if gv > gl else "X")
-        res_sim.append(s_auto)
-        
-        color = "🟢" if s_auto == col_base[i] else "🔴"
-        st.markdown(f"**{s_auto}** {color}")
-
-# --- BIBLIOTECA DE ESTADÍSTICAS ---
-st.divider()
-st.header("📚 Biblioteca de Equipos")
-
-if st.button("💾 Registrar en Historial"):
-    for i in range(num_p):
-        nom_l = equipos_local[i]
-        if nom_l not in st.session_state["biblioteca"]:
-            st.session_state["biblioteca"][nom_l] = {"pj": 0, "gf": 0, "gc": 0, "wins": 0}
-        
-        st.session_state["biblioteca"][nom_l]["pj"] += 1
-        st.session_state["biblioteca"][nom_l]["gf"] += goles_l[i]
-        st.session_state["biblioteca"][nom_l]["gc"] += goles_v[i]
-        if res_sim[i] == "1": st.session_state["biblioteca"][nom_l]["wins"] += 1
-
-        nom_v = equipos_visit[i]
-        if nom_v not in st.session_state["biblioteca"]:
-            st.session_state["biblioteca"][nom_v] = {"pj": 0, "gf": 0, "gc": 0, "wins": 0}
-        
-        st.session_state["biblioteca"][nom_v]["pj"] += 1
-        st.session_state["biblioteca"][nom_v]["gf"] += goles_v[i]
-        st.session_state["biblioteca"][nom_v]["gc"] += goles_l[i]
-        if res_sim[i] == "2": st.session_state["biblioteca"][nom_v]["wins"] += 1
+    cuota_final = 1.0
+    for ev in eventos_simples: cuota_final *= ev["cuo"]
     
-    st.success("✅ Historial actualizado.")
+    st.metric("Retorno Bruto", f"${(inv * cuota_final):.2f}", f"Cuota Total: {cuota_final:.2f}")
 
-if st.session_state["biblioteca"]:
-    lista_stats = []
-    for equipo, stats in st.session_state["biblioteca"].items():
-        prom_gf = stats["gf"] / stats["pj"] if stats["pj"] > 0 else 0
-        lista_stats.append({
-            "Equipo": equipo,
-            "Jugados": stats["pj"],
-            "Goles Favor": stats["gf"],
-            "Goles Contra": stats["gc"],
-            "Prom. Goles": round(prom_gf, 2),
-            "Victorias": stats["wins"]
-        })
+    if st.button("🔥 REGISTRAR TODO", use_container_width=True):
+        for e in eventos_simples:
+            res_r = "1" if e['r1'] > e['r2'] else ("2" if e['r1'] < e['r2'] else "X")
+            registrar_stats_bilateral(e['l'], e['v'], e['base'], res_r, e['dep'], e['liga'])
+        st.success("Estadísticas y jugadas registradas.")
+
+# --- CONTENIDO: ARBITRAJE (NUEVA SECCIÓN) ---
+elif menu == "🧮 Arbitraje":
+    st.title("🧮 Calculadora de Arbitraje (Surebet)")
+    st.info("Calcula el beneficio asegurado comparando dos resultados opuestos.")
+    ca, cb = st.columns(2)
+    c_a = ca.number_input("Cuota Resultado A", 1.01, value=2.10)
+    c_b = cb.number_input("Cuota Resultado B", 1.01, value=2.10)
+    inv_arb = st.number_input("Inversión a repartir ($)", 1.0, value=100.0)
     
-    df_biblio = pd.DataFrame(lista_stats)
-    st.dataframe(df_biblio, use_container_width=True, hide_index=True)
+    prob = (1/c_a) + (1/c_b)
+    if prob < 1:
+        st.success(f"✅ Arbitraje: {((1-prob)*100):.2f}% de ganancia.")
+        st.write(f"Apostar A: **${(inv_arb/(prob*c_a)):.2f}** | Apostar B: **${(inv_arb/(prob*c_b)):.2f}**")
+    else: st.error("No hay arbitraje en estas cuotas.")
 
-# --- DESCARGA ---
-st.divider()
-st.subheader("💾 Guardar Datos")
+# --- CONTENIDO: ESTADÍSTICAS ---
+elif menu == "📊 Estadísticas":
+    st.title("📊 Rendimiento por Ligas y Equipos")
+    conn = sqlite3.connect('apuestas_master.db')
+    df = pd.read_sql_query("SELECT * FROM stats_equipos", conn); conn.close()
+    
+    if not df.empty:
+        c_dep, c_lig, c_bus = st.columns([1, 1, 2])
+        sel_d = c_dep.selectbox("Deporte", ["Todos"] + df['deporte'].unique().tolist())
+        df_f = df[df['deporte'] == sel_d] if sel_d != "Todos" else df
+        
+        sel_l = c_lig.selectbox("Liga", ["Todas"] + df_f['liga'].unique().tolist())
+        df_f = df_f[df_f['liga'] == sel_l] if sel_l != "Todas" else df_f
+        
+        bus = c_bus.text_input("Buscar Equipo...")
+        if bus: df_f = df_f[df_f['equipo'].str.contains(bus, case=False)]
+        
+        st.dataframe(df_f, use_container_width=True, hide_index=True)
+    else: st.info("Sin datos registrados.")
 
-col_d1, col_d2 = st.columns([3, 1])
-with col_d1:
-    nombre_archivo = st.text_input("Nombre:", value=f"backup_{datetime.now().strftime('%Y%m%d')}")
-
-datos_export = {
-    "num_p": num_p,
-    "solo_ganador": solo_ganador,
-    "err_max": err_max,
-    "apuesta_col": apuesta_col,
-    "local": equipos_local,
-    "visit": equipos_visit,
-    "competiciones": competiciones,
-    "base": col_base,
-    "cuotas": matriz_cuotas,
-    "biblioteca": st.session_state["biblioteca"], 
-    "fecha_creacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-}
-
-json_str = json.dumps(datos_export, indent=4)
-
-with col_d2:
-    st.write("##")
-    st.download_button("⬇️ Descargar JSON", json_str, f"{nombre_archivo}.json", "application/json")
+# --- INICIO ---
+elif menu == "🏠 Inicio":
+    st.title("🚀 Betting Manager v10")
+    st.write("Bienvenido al sistema profesional. Usa el menú lateral para navegar.")
