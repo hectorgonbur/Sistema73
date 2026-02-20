@@ -1,13 +1,11 @@
 # app.py
 # Aplicación Streamlit para gestión de apuestas deportivas (Parte 1)
-# Autor: Desarrollador Senior Python
+# Versión corregida - Error UnboundLocalError solucionado
 # Ejecutar: streamlit run app.py
 
 import streamlit as st
-import pandas as pd
 from datetime import datetime, time, date
-from typing import Dict, List, Optional, Any
-import json
+from typing import List, Dict
 
 # -------------------------------------------------------------------
 # CONFIGURACIÓN INICIAL DE LA PÁGINA
@@ -65,7 +63,7 @@ def init_session_state():
     # Página actual (controlada por el menú)
     if 'pagina_actual' not in st.session_state:
         st.session_state.pagina_actual = "Inicio"
-    
+
     # Datos maestros (deportes y ligas)
     if 'deportes' not in st.session_state:
         st.session_state.deportes = [
@@ -78,7 +76,7 @@ def init_session_state():
             {"id": "premier", "deporte_id": "futbol", "nombre": "Premier League"},
             {"id": "nba", "deporte_id": "baloncesto", "nombre": "NBA"},
         ]
-    
+
     # Estado de la página "Apuesta Simple"
     if 'eventos' not in st.session_state:
         st.session_state.eventos = []  # lista de eventos (diccionarios)
@@ -86,7 +84,7 @@ def init_session_state():
         st.session_state.cantidad_eventos = 1
     if 'monto_jugado' not in st.session_state:
         st.session_state.monto_jugado = 0.0
-    
+
     # Historial de apuestas registradas (estadísticas)
     if 'estadisticas' not in st.session_state:
         st.session_state.estadisticas = []
@@ -116,7 +114,7 @@ def render_sidebar():
     with st.sidebar:
         st.title("⚡ Bet Manager")
         st.markdown("---")
-        
+
         # APUESTAS
         with st.expander("📊 APUESTAS", expanded=True):
             if st.button("Apuesta Simple", key="btn_apuesta_simple", use_container_width=True):
@@ -125,7 +123,7 @@ def render_sidebar():
                 st.session_state.pagina_actual = "Apuesta Múltiple"
             if st.button("Sistema", key="btn_sistema", use_container_width=True):
                 st.session_state.pagina_actual = "Sistema"
-        
+
         # SISTEMAS
         with st.expander("⚙️ SISTEMAS", expanded=False):
             if st.button("Jugadas", key="btn_jugadas", use_container_width=True):
@@ -134,26 +132,26 @@ def render_sidebar():
                 st.session_state.pagina_actual = "Filtros"
             if st.button("Columnas", key="btn_columnas", use_container_width=True):
                 st.session_state.pagina_actual = "Columnas"
-        
+
         # ESTADÍSTICAS
         with st.expander("📈 ESTADÍSTICAS", expanded=False):
             if st.button("Est. Equipos", key="btn_est_equipos", use_container_width=True):
                 st.session_state.pagina_actual = "Est. Equipos"
             if st.button("Est. Jugadas", key="btn_est_jugadas", use_container_width=True):
                 st.session_state.pagina_actual = "Est. Jugadas"
-        
+
         # GANANCIAS
         with st.expander("💰 GANANCIAS", expanded=False):
             if st.button("Billetera", key="btn_billetera", use_container_width=True):
                 st.session_state.pagina_actual = "Billetera"
-        
+
         # ARCHIVOS
         with st.expander("📁 ARCHIVOS", expanded=False):
             if st.button("Guardar", key="btn_guardar", use_container_width=True):
                 st.session_state.pagina_actual = "Guardar"
             if st.button("Exportar", key="btn_exportar", use_container_width=True):
                 st.session_state.pagina_actual = "Exportar"
-        
+
         st.markdown("---")
         st.caption(f"Página actual: **{st.session_state.pagina_actual}**")
 
@@ -177,30 +175,9 @@ def render_en_construccion():
 # -------------------------------------------------------------------
 def render_apuesta_simple():
     st.title("📋 Apuesta Simple")
-    
+
     # -----------------------------------------------------------------
-    # A. Cabecera: control de eventos y marcador
-    # -----------------------------------------------------------------
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        # Control de eventos (number_input con botones +/-)
-        cantidad = st.number_input(
-            "Número de eventos",
-            min_value=1,
-            max_value=30,
-            value=st.session_state.cantidad_eventos,
-            step=1,
-            key="input_cantidad_eventos"
-        )
-        # Actualizar la cantidad si cambia
-        if cantidad != st.session_state.cantidad_eventos:
-            st.session_state.cantidad_eventos = cantidad
-            # Ajustar la lista de eventos (añadir o quitar)
-            actualizar_lista_eventos()
-            st.rerun()
-    
-    # -----------------------------------------------------------------
-    # Función para ajustar la lista de eventos según cantidad
+    # Función para ajustar la lista de eventos según cantidad (definida ANTES de usarla)
     # -----------------------------------------------------------------
     def actualizar_lista_eventos():
         eventos = st.session_state.eventos
@@ -225,7 +202,28 @@ def render_apuesta_simple():
                 })
         elif len(eventos) > target:
             st.session_state.eventos = eventos[:target]
-    
+
+    # -----------------------------------------------------------------
+    # A. Cabecera: control de eventos y marcador
+    # -----------------------------------------------------------------
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        # Control de eventos (number_input con botones +/-)
+        cantidad = st.number_input(
+            "Número de eventos",
+            min_value=1,
+            max_value=30,
+            value=st.session_state.cantidad_eventos,
+            step=1,
+            key="input_cantidad_eventos"
+        )
+        # Actualizar la cantidad si cambia
+        if cantidad != st.session_state.cantidad_eventos:
+            st.session_state.cantidad_eventos = cantidad
+            # Ajustar la lista de eventos (añadir o quitar)
+            actualizar_lista_eventos()
+            st.rerun()
+
     # Calcular eventos ganados para el marcador
     eventos_ganados = 0
     for ev in st.session_state.eventos:
@@ -238,39 +236,39 @@ def render_apuesta_simple():
                 ganador = "X"
             if ganador == ev["base"]:
                 eventos_ganados += 1
-    
+
     with col2:
         st.markdown("##### Marcador")
         # Clase condicional para texto verde
         clase_texto = "texto-verde" if eventos_ganados == st.session_state.cantidad_eventos else ""
         st.markdown(f"<div class='{clase_texto}' style='font-size: 2rem; font-weight: bold;'>{eventos_ganados}/{st.session_state.cantidad_eventos}</div>", unsafe_allow_html=True)
-    
+
     st.markdown("---")
-    
+
     # -----------------------------------------------------------------
     # B. Lista dinámica de eventos (tarjetas)
     # -----------------------------------------------------------------
     # Ordenar eventos por fecha y hora (para mostrarlos ordenados)
     eventos_ordenados = sorted(
         st.session_state.eventos,
-        key=lambda e: (e["fecha"] or date.today(), e["hora"] or time(0,0))
+        key=lambda e: (e["fecha"] or date.today(), e["hora"] or time(0, 0))
     )
-    
+
     # Para facilitar la actualización, usaremos índices basados en el orden
     # Pero necesitamos mantener la referencia al original para modificar.
     # Creamos un mapeo: posición visible -> id del evento
     orden_ids = [ev["id"] for ev in eventos_ordenados]
-    
+
     # Diccionario para acceso rápido por id
     eventos_dict = {ev["id"]: ev for ev in st.session_state.eventos}
-    
+
     for idx, ev_id in enumerate(orden_ids):
         ev = eventos_dict[ev_id]
         with st.container():
             # Usamos un expander o un contenedor con borde (simula tarjeta)
             with st.expander(f"Evento #{idx+1} - {ev['equipo_local'] or 'Local'} vs {ev['equipo_visitante'] or 'Visitante'}", expanded=True):
                 cols = st.columns([1, 1, 1, 1])
-                
+
                 # Fila 1: Deporte, Liga, Fecha, Hora
                 with cols[0]:
                     # Selector de deporte con opción "Agregar nuevo"
@@ -283,7 +281,7 @@ def render_apuesta_simple():
                         default_idx = deporte_options.index(deporte_nombre_actual) if deporte_nombre_actual else 0
                     except ValueError:
                         default_idx = 0
-                    
+
                     seleccion = st.selectbox(
                         "Deporte",
                         options=deporte_options,
@@ -302,7 +300,7 @@ def render_apuesta_simple():
                             ev["deporte"] = deporte_obj["id"]
                         else:
                             ev["deporte"] = None
-                
+
                 with cols[1]:
                     # Selector de liga (dependiente del deporte)
                     ligas_disponibles = obtener_ligas_por_deporte(ev["deporte"]) if ev["deporte"] else []
@@ -313,7 +311,7 @@ def render_apuesta_simple():
                         default_liga_idx = liga_options.index(liga_nombre_actual) if liga_nombre_actual else 0
                     except ValueError:
                         default_liga_idx = 0
-                    
+
                     seleccion_liga = st.selectbox(
                         "Liga",
                         options=liga_options,
@@ -332,40 +330,46 @@ def render_apuesta_simple():
                             ev["liga"] = liga_obj["id"]
                         else:
                             ev["liga"] = None
-                
+
                 with cols[2]:
                     # Fecha
                     fecha_val = ev.get("fecha", date.today())
                     if not fecha_val:
                         fecha_val = date.today()
                     ev["fecha"] = st.date_input("Fecha", value=fecha_val, key=f"fecha_{ev_id}")
-                
+
                 with cols[3]:
                     # Hora
-                    hora_val = ev.get("hora", time(12,0))
+                    hora_val = ev.get("hora", time(12, 0))
                     if not hora_val:
-                        hora_val = time(12,0)
+                        hora_val = time(12, 0)
                     ev["hora"] = st.time_input("Hora", value=hora_val, key=f"hora_{ev_id}")
-                
+
                 # Fila 2: Equipos y resultados
                 cols2 = st.columns(4)
                 with cols2[0]:
                     ev["equipo_local"] = st.text_input("Equipo Local", value=ev.get("equipo_local", ""), key=f"el_{ev_id}")
                 with cols2[1]:
-                    ev["resultado_local"] = st.number_input("Resultado Local", value=ev.get("resultado_local") if ev.get("resultado_local") is not None else 0, step=1, key=f"rl_{ev_id}")
+                    # Usamos 0 como valor por defecto, pero si es None lo ponemos a 0 para que el input lo muestre vacío? Mejor usar None.
+                    valor_local = ev.get("resultado_local") if ev.get("resultado_local") is not None else 0
+                    ev["resultado_local"] = st.number_input("Resultado Local", value=valor_local, step=1, key=f"rl_{ev_id}")
                 with cols2[2]:
-                    ev["resultado_visitante"] = st.number_input("Resultado Visitante", value=ev.get("resultado_visitante") if ev.get("resultado_visitante") is not None else 0, step=1, key=f"rv_{ev_id}")
+                    valor_visit = ev.get("resultado_visitante") if ev.get("resultado_visitante") is not None else 0
+                    ev["resultado_visitante"] = st.number_input("Resultado Visitante", value=valor_visit, step=1, key=f"rv_{ev_id}")
                 with cols2[3]:
                     ev["equipo_visitante"] = st.text_input("Equipo Visitante", value=ev.get("equipo_visitante", ""), key=f"ev_{ev_id}")
-                
+
                 # Fila 3: Cuotas, Base y Bolita
-                cols3 = st.columns([1,1,1,1,0.5])
+                cols3 = st.columns([1, 1, 1, 1, 0.5])
                 with cols3[0]:
-                    ev["cuota_local"] = st.number_input("Cuota 1", value=ev.get("cuota_local") if ev.get("cuota_local") is not None else 0.0, step=0.01, format="%.2f", key=f"c1_{ev_id}")
+                    valor_c1 = ev.get("cuota_local") if ev.get("cuota_local") is not None else 0.0
+                    ev["cuota_local"] = st.number_input("Cuota 1", value=valor_c1, step=0.01, format="%.2f", key=f"c1_{ev_id}")
                 with cols3[1]:
-                    ev["cuota_empate"] = st.number_input("Cuota X", value=ev.get("cuota_empate") if ev.get("cuota_empate") is not None else 0.0, step=0.01, format="%.2f", key=f"cx_{ev_id}")
+                    valor_cx = ev.get("cuota_empate") if ev.get("cuota_empate") is not None else 0.0
+                    ev["cuota_empate"] = st.number_input("Cuota X", value=valor_cx, step=0.01, format="%.2f", key=f"cx_{ev_id}")
                 with cols3[2]:
-                    ev["cuota_visitante"] = st.number_input("Cuota 2", value=ev.get("cuota_visitante") if ev.get("cuota_visitante") is not None else 0.0, step=0.01, format="%.2f", key=f"c2_{ev_id}")
+                    valor_c2 = ev.get("cuota_visitante") if ev.get("cuota_visitante") is not None else 0.0
+                    ev["cuota_visitante"] = st.number_input("Cuota 2", value=valor_c2, step=0.01, format="%.2f", key=f"c2_{ev_id}")
                 with cols3[3]:
                     base_options = ["", "1", "X", "2"]
                     try:
@@ -373,7 +377,7 @@ def render_apuesta_simple():
                     except ValueError:
                         default_base_idx = 0
                     ev["base"] = st.selectbox("Base", options=base_options, index=default_base_idx, key=f"base_{ev_id}")
-                
+
                 with cols3[4]:
                     # Lógica de la bolita
                     bolita_clase = "gris"
@@ -389,9 +393,9 @@ def render_apuesta_simple():
                         else:
                             bolita_clase = "roja"
                     st.markdown(f"<div class='bolita {bolita_clase}'></div>", unsafe_allow_html=True)
-    
+
     st.markdown("---")
-    
+
     # -----------------------------------------------------------------
     # C. Pie de página: cálculos y botón registrar
     # -----------------------------------------------------------------
@@ -406,8 +410,9 @@ def render_apuesta_simple():
             elif ev["base"] == "2" and ev["cuota_visitante"] and ev["cuota_visitante"] > 0:
                 cuota_combinada *= ev["cuota_visitante"]
             else:
-                cuota_combinada *= 1.0  # si no hay cuota, se multiplica por 1 (no afecta)
-    
+                # Si no hay cuota válida, no multiplicamos (equivale a 1)
+                pass
+
     # Monto jugado
     monto = st.number_input(
         "Monto Jugado (Stake)",
@@ -418,11 +423,11 @@ def render_apuesta_simple():
         key="monto_jugado_input"
     )
     st.session_state.monto_jugado = monto
-    
+
     # Ganancias
     ganancia_bruta = monto * cuota_combinada
     ganancia_neta = ganancia_bruta - monto
-    
+
     col_f1, col_f2, col_f3 = st.columns(3)
     with col_f1:
         st.metric("Ganancia Bruta", f"{ganancia_bruta:.2f}")
@@ -453,7 +458,7 @@ def render_apuesta_simple():
             if monto <= 0:
                 st.error("El monto jugado debe ser mayor a cero.")
                 error = True
-            
+
             if not error:
                 # Crear diccionario de la apuesta
                 apuesta = {
@@ -477,7 +482,7 @@ def main():
     init_session_state()
     inject_custom_css()
     render_sidebar()
-    
+
     # Renderizar la página según el estado
     if st.session_state.pagina_actual == "Inicio":
         render_inicio()
