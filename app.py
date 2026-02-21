@@ -65,12 +65,10 @@ def load_bet(name):
     return None
 
 def update_statistics(bet_data):
-    # Placeholder: acumula estadísticas simples en STATS_FILE
     stats = {}
     if STATS_FILE.exists():
         with open(STATS_FILE, "r") as f:
             stats = json.load(f)
-    # Aquí se podrían agregar conteos por equipo, liga, etc.
     stats["last_bet"] = bet_data
     stats["total_bets"] = stats.get("total_bets", 0) + 1
     with open(STATS_FILE, "w") as f:
@@ -97,14 +95,14 @@ def generar_combinaciones(jugadas):
         elif j == "1X2":
             opciones.append(["1", "X", "2"])
         else:
-            opciones.append([j])  # fallback
+            # Si es un solo carácter o una combinación no estándar, lo tratamos como un único signo
+            # (podría mejorarse, pero para el ejemplo es suficiente)
+            opciones.append([j])
     return list(itertools.product(*opciones))
 
 def aplicar_filtros(combinaciones, bases, filtros):
     """Aplica filtros a las combinaciones y devuelve las que cumplen.
-    filtros: dict con rangos para base, signos, consecutivos, interrupciones."""
-    # Por simplicidad, solo implementamos filtro BASE como ejemplo
-    # En un desarrollo completo se implementarían todos
+    Por ahora solo implementa filtro BASE como ejemplo."""
     if not filtros.get("base_activo", False):
         return combinaciones
     min_base, max_base = filtros.get("base_min", 0), filtros.get("base_max", len(bases))
@@ -133,7 +131,7 @@ def page_apuesta_simple():
                               key="simple_num")
         st.session_state.simple_eventos = num
     with col2:
-        # Contador de eventos ganados (se calcula después de introducir resultados)
+        # Contador de eventos ganados
         ganados = 0
         for ev in st.session_state.simple_datos:
             if ev.get("resultado") == ev.get("base"):
@@ -153,32 +151,36 @@ def page_apuesta_simple():
             ev = st.session_state.simple_datos[i]
             col_a, col_b, col_c, col_d = st.columns(4)
             with col_a:
-                deporte = st.selectbox("Deporte", load_sports() + ["Otro..."],
+                deporte_list = load_sports() + ["Otro..."]
+                default_index = deporte_list.index(ev.get("deporte")) if ev.get("deporte") in deporte_list else 0
+                deporte = st.selectbox("Deporte", deporte_list,
                                        key=f"simple_deporte_{i}",
-                                       index=load_sports().index(ev.get("deporte")) if ev.get("deporte") in load_sports() else 0)
+                                       index=default_index)
                 if deporte == "Otro...":
                     new_deporte = st.text_input("Nuevo deporte", key=f"simple_new_deporte_{i}")
                     if new_deporte and st.button("Añadir", key=f"simple_add_deporte_{i}"):
                         add_sport(new_deporte)
                         st.rerun()
-                ev["deporte"] = deporte
+                ev["deporte"] = deporte if deporte != "Otro..." else ev.get("deporte", "")
             with col_b:
                 ligas = load_leagues(ev.get("deporte", ""))
-                liga = st.selectbox("Liga", ligas + ["Otro..."],
+                liga_list = ligas + ["Otro..."]
+                default_liga = liga_list.index(ev.get("liga")) if ev.get("liga") in liga_list else 0
+                liga = st.selectbox("Liga", liga_list,
                                     key=f"simple_liga_{i}",
-                                    index=ligas.index(ev.get("liga")) if ev.get("liga") in ligas else 0)
+                                    index=default_liga)
                 if liga == "Otro...":
                     new_liga = st.text_input("Nueva liga", key=f"simple_new_liga_{i}")
                     if new_liga and st.button("Añadir", key=f"simple_add_liga_{i}"):
                         add_league(ev.get("deporte", ""), new_liga)
                         st.rerun()
-                ev["liga"] = liga
+                ev["liga"] = liga if liga != "Otro..." else ev.get("liga", "")
             with col_c:
-                fecha = st.date_input("Fecha", value=ev.get("fecha", datetime.today()),
+                fecha = st.date_input("Fecha", value=datetime.fromisoformat(ev.get("fecha", datetime.today().isoformat())).date() if ev.get("fecha") else datetime.today(),
                                       key=f"simple_fecha_{i}")
                 ev["fecha"] = fecha.isoformat()
             with col_d:
-                hora = st.time_input("Hora", value=ev.get("hora", datetime.now().time()),
+                hora = st.time_input("Hora", value=datetime.fromisoformat(ev.get("hora", datetime.now().isoformat())).time() if ev.get("hora") else datetime.now().time(),
                                      key=f"simple_hora_{i}")
                 ev["hora"] = hora.isoformat()
 
@@ -272,7 +274,6 @@ def page_apuesta_simple():
 # -------------------------------------------------------------------
 def page_apuesta_multiple():
     st.header("Apuesta Múltiple")
-    # Similar a simple pero con campo JUGADA y generación de columnas
     # Inicializar estado
     if "multi_eventos" not in st.session_state:
         st.session_state.multi_eventos = 1
@@ -290,10 +291,7 @@ def page_apuesta_multiple():
                               key="multi_num")
         st.session_state.multi_eventos = num
     with col2:
-        # Aquí se mostrará el máximo de aciertos de las columnas generadas
         st.markdown("**Aciertos máximos:** (se actualiza al generar)")
-        # Por ahora placeholder
-        st.info("Genera columnas para ver contador")
 
     # Rango de aciertos base
     col_min, col_and, col_max = st.columns([2,1,2])
@@ -316,39 +314,42 @@ def page_apuesta_multiple():
     while len(st.session_state.multi_datos) > num:
         st.session_state.multi_datos.pop()
 
-    # Renderizar eventos (similar a simple pero con JUGADA y BASE)
+    # Renderizar eventos
     for i in range(num):
         with st.expander(f"Evento {i+1}", expanded=True):
             ev = st.session_state.multi_datos[i]
-            # Deporte, liga, fecha, hora (igual que simple)
             col_a, col_b, col_c, col_d = st.columns(4)
             with col_a:
-                deporte = st.selectbox("Deporte", load_sports() + ["Otro..."],
+                deporte_list = load_sports() + ["Otro..."]
+                default_index = deporte_list.index(ev.get("deporte")) if ev.get("deporte") in deporte_list else 0
+                deporte = st.selectbox("Deporte", deporte_list,
                                        key=f"multi_deporte_{i}",
-                                       index=load_sports().index(ev.get("deporte")) if ev.get("deporte") in load_sports() else 0)
+                                       index=default_index)
                 if deporte == "Otro...":
                     new_deporte = st.text_input("Nuevo deporte", key=f"multi_new_deporte_{i}")
                     if new_deporte and st.button("Añadir", key=f"multi_add_deporte_{i}"):
                         add_sport(new_deporte)
                         st.rerun()
-                ev["deporte"] = deporte
+                ev["deporte"] = deporte if deporte != "Otro..." else ev.get("deporte", "")
             with col_b:
                 ligas = load_leagues(ev.get("deporte", ""))
-                liga = st.selectbox("Liga", ligas + ["Otro..."],
+                liga_list = ligas + ["Otro..."]
+                default_liga = liga_list.index(ev.get("liga")) if ev.get("liga") in liga_list else 0
+                liga = st.selectbox("Liga", liga_list,
                                     key=f"multi_liga_{i}",
-                                    index=ligas.index(ev.get("liga")) if ev.get("liga") in ligas else 0)
+                                    index=default_liga)
                 if liga == "Otro...":
                     new_liga = st.text_input("Nueva liga", key=f"multi_new_liga_{i}")
                     if new_liga and st.button("Añadir", key=f"multi_add_liga_{i}"):
                         add_league(ev.get("deporte", ""), new_liga)
                         st.rerun()
-                ev["liga"] = liga
+                ev["liga"] = liga if liga != "Otro..." else ev.get("liga", "")
             with col_c:
-                fecha = st.date_input("Fecha", value=ev.get("fecha", datetime.today()),
+                fecha = st.date_input("Fecha", value=datetime.fromisoformat(ev.get("fecha", datetime.today().isoformat())).date() if ev.get("fecha") else datetime.today(),
                                       key=f"multi_fecha_{i}")
                 ev["fecha"] = fecha.isoformat()
             with col_d:
-                hora = st.time_input("Hora", value=ev.get("hora", datetime.now().time()),
+                hora = st.time_input("Hora", value=datetime.fromisoformat(ev.get("hora", datetime.now().isoformat())).time() if ev.get("hora") else datetime.now().time(),
                                      key=f"multi_hora_{i}")
                 ev["hora"] = hora.isoformat()
 
@@ -368,7 +369,7 @@ def page_apuesta_multiple():
                 visit = st.text_input("Visitante", value=ev.get("visit", ""), key=f"multi_visit_{i}")
                 ev["visit"] = visit
 
-            # Determinar resultado real
+            # Resultado real
             if res_local > res_visit:
                 resultado = "1"
             elif res_local < res_visit:
@@ -391,7 +392,6 @@ def page_apuesta_multiple():
                                        value=ev.get("odd2", 1.0), key=f"multi_odd2_{i}")
                 ev["odd2"] = odd2
             with col_l:
-                # JUGADA: puede ser 1, X, 2 o combinaciones
                 jugada = st.text_input("JUGADA", value=ev.get("jugada", "1"), key=f"multi_jugada_{i}")
                 ev["jugada"] = jugada
             with col_m:
@@ -408,7 +408,7 @@ def page_apuesta_multiple():
         jugadas = [ev.get("jugada", "1") for ev in st.session_state.multi_datos]
         combinaciones = generar_combinaciones(jugadas)
         st.session_state["multi_combinaciones"] = combinaciones
-        st.session_state["multi_monto_total"] = monto_total
+        st.session_state["multi_monto_total"] = monto_total   # Guardamos el monto total
         st.success(f"Se generaron {len(combinaciones)} columnas")
 
     # Mostrar columnas si existen
@@ -421,7 +421,7 @@ def page_apuesta_multiple():
             cols = st.columns([3,1,1,1])
             with cols[0]:
                 st.write(" ".join(comb))
-            # Calcular cuota de la columna según las odds de cada evento
+            # Calcular cuota de la columna
             cuota_columna = 1.0
             for j, signo in enumerate(comb):
                 ev = st.session_state.multi_datos[j]
@@ -448,7 +448,6 @@ def page_apuesta_multiple():
 
     st.divider()
     if st.button("REGISTRAR", key="multi_registrar"):
-        # Guardar la apuesta múltiple
         bet_data = {
             "tipo": "multiple",
             "fecha": datetime.now().isoformat(),
@@ -466,8 +465,6 @@ def page_apuesta_multiple():
 # -------------------------------------------------------------------
 def page_jugadas():
     st.header("Jugadas (Sistemas)")
-    # Muy similar a apuesta múltiple pero sin campo BASE
-    # Inicializar estado
     if "sis_jugadas_eventos" not in st.session_state:
         st.session_state.sis_jugadas_eventos = 1
     if "sis_jugadas_datos" not in st.session_state:
@@ -490,35 +487,38 @@ def page_jugadas():
     for i in range(num):
         with st.expander(f"Evento {i+1}", expanded=True):
             ev = st.session_state.sis_jugadas_datos[i]
-            # Deporte, liga, fecha, hora
             col_a, col_b, col_c, col_d = st.columns(4)
             with col_a:
-                deporte = st.selectbox("Deporte", load_sports() + ["Otro..."],
+                deporte_list = load_sports() + ["Otro..."]
+                default_index = deporte_list.index(ev.get("deporte")) if ev.get("deporte") in deporte_list else 0
+                deporte = st.selectbox("Deporte", deporte_list,
                                        key=f"sis_jugadas_deporte_{i}",
-                                       index=load_sports().index(ev.get("deporte")) if ev.get("deporte") in load_sports() else 0)
+                                       index=default_index)
                 if deporte == "Otro...":
                     new_deporte = st.text_input("Nuevo deporte", key=f"sis_jugadas_new_deporte_{i}")
                     if new_deporte and st.button("Añadir", key=f"sis_jugadas_add_deporte_{i}"):
                         add_sport(new_deporte)
                         st.rerun()
-                ev["deporte"] = deporte
+                ev["deporte"] = deporte if deporte != "Otro..." else ev.get("deporte", "")
             with col_b:
                 ligas = load_leagues(ev.get("deporte", ""))
-                liga = st.selectbox("Liga", ligas + ["Otro..."],
+                liga_list = ligas + ["Otro..."]
+                default_liga = liga_list.index(ev.get("liga")) if ev.get("liga") in liga_list else 0
+                liga = st.selectbox("Liga", liga_list,
                                     key=f"sis_jugadas_liga_{i}",
-                                    index=ligas.index(ev.get("liga")) if ev.get("liga") in ligas else 0)
+                                    index=default_liga)
                 if liga == "Otro...":
                     new_liga = st.text_input("Nueva liga", key=f"sis_jugadas_new_liga_{i}")
                     if new_liga and st.button("Añadir", key=f"sis_jugadas_add_liga_{i}"):
                         add_league(ev.get("deporte", ""), new_liga)
                         st.rerun()
-                ev["liga"] = liga
+                ev["liga"] = liga if liga != "Otro..." else ev.get("liga", "")
             with col_c:
-                fecha = st.date_input("Fecha", value=ev.get("fecha", datetime.today()),
+                fecha = st.date_input("Fecha", value=datetime.fromisoformat(ev.get("fecha", datetime.today().isoformat())).date() if ev.get("fecha") else datetime.today(),
                                       key=f"sis_jugadas_fecha_{i}")
                 ev["fecha"] = fecha.isoformat()
             with col_d:
-                hora = st.time_input("Hora", value=ev.get("hora", datetime.now().time()),
+                hora = st.time_input("Hora", value=datetime.fromisoformat(ev.get("hora", datetime.now().isoformat())).time() if ev.get("hora") else datetime.now().time(),
                                      key=f"sis_jugadas_hora_{i}")
                 ev["hora"] = hora.isoformat()
 
@@ -564,8 +564,8 @@ def page_jugadas():
                 jugada = st.text_input("JUGADA", value=ev.get("jugada", "1"), key=f"sis_jugadas_jugada_{i}")
                 ev["jugada"] = jugada
 
+    # Monto total (se guarda automáticamente en session_state por la key)
     monto = st.number_input("MONTO", min_value=0.0, step=1.0, format="%.2f", key="sis_jugadas_monto")
-    st.session_state["sis_jugadas_monto"] = monto
 
     if st.button("REGISTRAR", key="sis_jugadas_registrar"):
         bet_data = {
@@ -584,13 +584,11 @@ def page_jugadas():
 def page_filtros():
     st.header("Filtros")
     st.markdown("**SISTEMA JUGADO**")
-    # Cargar datos de la página Jugadas (si existen)
     datos_jugadas = st.session_state.get("sis_jugadas_datos", [])
     if not datos_jugadas:
         st.warning("No hay datos de Jugadas. Ve a Sistemas > Jugadas primero.")
         return
 
-    # Mostrar lista de partidos con sus signos y base seleccionable
     st.subheader("Partidos")
     bases = []
     for i, ev in enumerate(datos_jugadas):
@@ -606,14 +604,12 @@ def page_filtros():
                                 key=f"filtro_base_{i}",
                                 index=["1","X","2"].index(ev.get("base","1")))
             bases.append(base)
-            # Guardar base en los datos de jugadas para uso posterior
             ev["base"] = base
-    st.session_state["sis_jugadas_datos"] = datos_jugadas  # actualizar
+    st.session_state["sis_jugadas_datos"] = datos_jugadas
 
     st.divider()
     st.subheader("FILTROS SISTEMA")
 
-    # Filtro BASE (rango de aciertos de base)
     st.markdown("**Filtro BASE**")
     col_min, col_max = st.columns(2)
     with col_min:
@@ -623,7 +619,6 @@ def page_filtros():
         base_max = st.number_input("Máx aciertos BASE", min_value=0, max_value=len(datos_jugadas),
                                    value=len(datos_jugadas), step=1, key="filtro_base_max")
 
-    # Filtro SIGNOS (cantidad de cada signo)
     st.markdown("**Filtro SIGNOS**")
     col_1, col_x, col_2 = st.columns(3)
     with col_1:
@@ -636,7 +631,6 @@ def page_filtros():
         min_2 = st.number_input("2 mín", min_value=0, max_value=len(datos_jugadas), value=0, key="filtro_2_min")
         max_2 = st.number_input("2 máx", min_value=0, max_value=len(datos_jugadas), value=len(datos_jugadas), key="filtro_2_max")
 
-    # Filtro CONSECUTIVOS
     st.markdown("**Filtro CONSECUTIVOS**")
     col_c1, col_cx, col_c2 = st.columns(3)
     with col_c1:
@@ -649,7 +643,6 @@ def page_filtros():
         cons_2_min = st.number_input("2 consec mín", min_value=0, max_value=len(datos_jugadas), value=0, key="cons_2_min")
         cons_2_max = st.number_input("2 consec máx", min_value=0, max_value=len(datos_jugadas), value=len(datos_jugadas), key="cons_2_max")
 
-    # Filtro INTERRUPCIONES
     st.markdown("**Filtro INTERRUPCIONES**")
     interrupciones_min = st.number_input("Interrupciones mín", min_value=0, max_value=len(datos_jugadas), value=0, key="inter_min")
     interrupciones_max = st.number_input("Interrupciones máx", min_value=0, max_value=len(datos_jugadas), value=len(datos_jugadas), key="inter_max")
@@ -672,7 +665,6 @@ def page_filtros():
 # -------------------------------------------------------------------
 def page_columnas():
     st.header("Columnas Generadas")
-    # Verificar que existen datos de jugadas y filtros
     datos_jugadas = st.session_state.get("sis_jugadas_datos", [])
     filtros = st.session_state.get("filtros_config", {})
     if not datos_jugadas:
@@ -686,8 +678,7 @@ def page_columnas():
         jugadas = [ev.get("jugada", "1") for ev in datos_jugadas]
         bases = [ev.get("base", "1") for ev in datos_jugadas]
         combinaciones = generar_combinaciones(jugadas)
-        # Aplicar filtros (solo filtro BASE como ejemplo)
-        # En una implementación completa se aplicarían todos los filtros
+        # Aplicar filtros (solo BASE como ejemplo; se pueden añadir los demás)
         min_base = filtros.get("base_min", 0)
         max_base = filtros.get("base_max", len(bases))
         combinaciones_filtradas = []
@@ -696,6 +687,7 @@ def page_columnas():
             if min_base <= aciertos_base <= max_base:
                 combinaciones_filtradas.append(comb)
         st.session_state["columnas_generadas"] = combinaciones_filtradas
+        # El monto se obtiene de session_state (ya está guardado por el widget)
         st.session_state["columnas_monto"] = st.session_state.get("sis_jugadas_monto", 0)
         st.success(f"Se generaron {len(combinaciones_filtradas)} columnas después de filtros")
 
@@ -737,7 +729,7 @@ def page_columnas():
                     st.markdown("⚪")
 
 # -------------------------------------------------------------------
-# Páginas de estadísticas, billetera, guardar y exportar (placeholders funcionales)
+# Páginas de estadísticas, billetera, guardar y exportar
 # -------------------------------------------------------------------
 def page_est_equipos():
     st.header("Estadísticas de Equipos")
@@ -755,16 +747,16 @@ def page_est_jugadas():
 def page_billetera():
     st.header("Billetera")
     if "wallet" not in st.session_state:
-        st.session_state.wallet = 1000.0  # saldo inicial
+        st.session_state.wallet = 1000.0
     st.metric("Saldo actual", f"{st.session_state.wallet:.2f}")
     col1, col2 = st.columns(2)
     with col1:
-        ingreso = st.number_input("Ingresar monto", min_value=0.0, step=10.0)
+        ingreso = st.number_input("Ingresar monto", min_value=0.0, step=10.0, key="wallet_ingreso")
         if st.button("Añadir"):
             st.session_state.wallet += ingreso
             st.rerun()
     with col2:
-        retiro = st.number_input("Retirar monto", min_value=0.0, step=10.0)
+        retiro = st.number_input("Retirar monto", min_value=0.0, step=10.0, key="wallet_retiro")
         if st.button("Retirar") and retiro <= st.session_state.wallet:
             st.session_state.wallet -= retiro
             st.rerun()
@@ -773,13 +765,13 @@ def page_guardar():
     st.header("Guardar Apuesta Actual")
     nombre = st.text_input("Nombre del archivo (sin extensión)")
     if st.button("Guardar"):
-        # Recopilar datos relevantes de sesión
         bet_data = {
             "timestamp": datetime.now().isoformat(),
             "simple_datos": st.session_state.get("simple_datos", []),
             "multi_datos": st.session_state.get("multi_datos", []),
             "sis_jugadas_datos": st.session_state.get("sis_jugadas_datos", []),
-            # ... otros estados
+            "filtros_config": st.session_state.get("filtros_config", {}),
+            "columnas_generadas": st.session_state.get("columnas_generadas", [])
         }
         if nombre:
             save_bet(bet_data, nombre)
