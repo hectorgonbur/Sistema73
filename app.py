@@ -14,26 +14,11 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos personalizados con alto contraste
+# Estilos personalizados
 st.markdown("""
 <style>
-    /* Variables de colores de alto contraste */
-    :root {
-        --text-primary: #000000;
-        --text-secondary: #1a1a1a;
-        --text-white: #ffffff;
-        --bg-primary: #ffffff;
-        --bg-secondary: #f0f2f6;
-        --bg-card: #ffffff;
-        --accent-blue: #0066cc;
-        --accent-purple: #6600cc;
-        --accent-green: #008800;
-        --accent-red: #cc0000;
-        --border-color: #333333;
-    }
-    
     .main-header {
-        background: linear-gradient(135deg, #0066cc 0%, #6600cc 100%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 1.5rem;
         border-radius: 15px;
         margin-bottom: 2rem;
@@ -44,170 +29,158 @@ st.markdown("""
         margin: 0;
         text-align: center;
         font-size: 2.5rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
     }
     .evento-card {
-        background: #ffffff;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         padding: 1.5rem;
         border-radius: 15px;
-        border: 2px solid #000000;
+        border: 1px solid #dee2e6;
         margin-bottom: 1rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+    }
+    .evento-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     }
     .contador-card {
-        background: #0066cc;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 1rem;
         border-radius: 15px;
         color: white;
         text-align: center;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border: 2px solid #000000;
     }
     .contador {
         font-size: 2rem;
         font-weight: bold;
-        color: #ffffff;
     }
     .contador-verde {
-        color: #00ff00;
-        font-weight: bold;
-        text-shadow: 0 0 5px rgba(0,255,0,0.5);
+        color: #4ade80;
     }
     .contador-normal {
-        color: #ffffff;
-        font-weight: bold;
-    }
-    .contador-negro {
         color: #000000;
-        font-weight: bold;
-        font-size: 1.5rem;
+    }
+    .contador-blanco {
+        color: white;
     }
     .bolita {
-        width: 35px;
-        height: 35px;
+        width: 30px;
+        height: 30px;
         border-radius: 50%;
         display: inline-block;
         margin: 0 auto;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        border: 2px solid #000000;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        transition: transform 0.3s;
+    }
+    .bolita:hover {
+        transform: scale(1.1);
     }
     .bolita-verde {
-        background: #00cc00;
+        background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
     }
     .bolita-roja {
-        background: #ff3333;
+        background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
     }
     .base-btn {
-        padding: 8px 15px;
-        margin: 0 3px;
-        border: 2px solid #000000;
-        background-color: #ffffff;
-        border-radius: 8px;
+        padding: 5px 10px;
+        margin: 0 2px;
+        border: 1px solid #dee2e6;
+        background-color: white;
+        border-radius: 5px;
         cursor: pointer;
         font-weight: bold;
-        font-size: 1.1rem;
-        color: #000000;
+        transition: all 0.3s;
     }
     .base-btn:hover {
-        background-color: #e6e6e6;
-        transform: scale(1.05);
+        background-color: #e9ecef;
     }
     .base-btn-selected {
-        background: #0066cc;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        border-color: #000000;
-        font-weight: bold;
+        border-color: #667eea;
     }
     .ganancia-card {
-        background: #ffffff;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         padding: 1.5rem;
         border-radius: 15px;
         text-align: center;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border: 2px solid #000000;
+        transition: transform 0.3s;
     }
-    .ganancia-card h4 {
-        color: #000000;
-        font-weight: bold;
-        font-size: 1.2rem;
-        margin-bottom: 10px;
+    .ganancia-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     }
     .ganancia-valor {
         font-size: 2rem;
         font-weight: bold;
-        color: #0066cc;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
     .columna-card {
-        background: #ffffff;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         padding: 1rem;
         border-radius: 10px;
         margin-bottom: 0.5rem;
-        border-left: 8px solid #0066cc;
-        border-top: 1px solid #000000;
-        border-right: 1px solid #000000;
-        border-bottom: 1px solid #000000;
+        border-left: 5px solid #667eea;
+        transition: transform 0.3s;
     }
     .columna-card:hover {
-        background: #f0f7ff;
+        transform: translateX(5px);
     }
     .filtro-card {
-        background: #ffffff;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         padding: 1rem;
         border-radius: 10px;
         margin-bottom: 1rem;
-        border-left: 8px solid #6600cc;
-        border-top: 1px solid #000000;
-        border-right: 1px solid #000000;
-        border-bottom: 1px solid #000000;
+        border-left: 5px solid #764ba2;
     }
     .stButton > button {
-        background: #0066cc;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         font-weight: bold;
-        border: 2px solid #000000;
+        border: none;
         border-radius: 10px;
         padding: 10px 20px;
-        font-size: 1.1rem;
+        transition: all 0.3s;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     .stButton > button:hover {
-        background: #004999;
-        border-color: #000000;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     }
     .menu-title {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         font-weight: bold;
-        color: #0066cc;
+        color: #667eea;
         padding: 10px;
-        border-bottom: 3px solid #0066cc;
+        border-bottom: 2px solid #667eea;
         margin-bottom: 10px;
     }
     .success-message {
-        background: #008800;
+        background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
         color: white;
         padding: 1rem;
         border-radius: 10px;
         text-align: center;
         font-weight: bold;
-        border: 2px solid #000000;
     }
     .info-message {
-        background: #0066cc;
+        background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
         color: white;
         padding: 1rem;
         border-radius: 10px;
         text-align: center;
         font-weight: bold;
-        border: 2px solid #000000;
     }
     .evento-titulo {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         font-weight: bold;
-        color: #0066cc;
-        margin-bottom: 15px;
-        border-bottom: 2px solid #0066cc;
-        padding-bottom: 5px;
+        color: #333;
+        margin-bottom: 10px;
     }
     .resultado-input {
         max-width: 60px;
@@ -216,124 +189,33 @@ st.markdown("""
         display: flex;
         align-items: center;
         gap: 10px;
-        background-color: #ffffff;
-        padding: 8px 15px;
-        border-radius: 8px;
-        border: 2px solid #000000;
+        background-color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
     }
     .eventos-control button {
-        width: 40px;
-        height: 40px;
+        width: 30px;
+        height: 30px;
         padding: 0;
-        font-size: 1.3rem;
-        background-color: #0066cc;
-        color: white;
-        border: 2px solid #000000;
-        border-radius: 8px;
+        font-size: 1.2rem;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
         cursor: pointer;
-        font-weight: bold;
     }
     .eventos-control button:hover {
-        background-color: #004999;
+        background-color: #e9ecef;
     }
     .eventos-control span {
-        font-size: 1.5rem;
+        font-size: 1.2rem;
         font-weight: bold;
-        min-width: 40px;
+        min-width: 30px;
         text-align: center;
-        color: #000000;
-    }
-    
-    /* Estilos para inputs y labels */
-    .stSelectbox label, .stDateInput label, .stTimeInput label, .stNumberInput label, .stTextInput label {
-        color: #000000 !important;
-        font-weight: bold !important;
-        font-size: 1rem !important;
-    }
-    
-    .stSelectbox div, .stDateInput div, .stTimeInput div, .stNumberInput div, .stTextInput div {
-        color: #000000 !important;
-    }
-    
-    input, select, textarea {
-        color: #000000 !important;
-        background-color: #ffffff !important;
-        border: 2px solid #000000 !important;
-        font-weight: normal !important;
-    }
-    
-    /* Títulos */
-    h1, h2, h3, h4, h5, h6 {
-        color: #000000 !important;
-        font-weight: bold !important;
-    }
-    
-    h3 {
-        color: #0066cc !important;
-        border-bottom: 2px solid #0066cc;
-        padding-bottom: 5px;
-    }
-    
-    /* Texto general */
-    p, span, div {
-        color: #000000;
-    }
-    
-    /* Sidebar */
-    .css-1d391kg, .css-1lcbmhc {
-        background-color: #f0f2f6;
-    }
-    
-    .stExpander {
-        border: 2px solid #000000 !important;
-        border-radius: 10px !important;
-        margin-bottom: 10px !important;
-    }
-    
-    .stExpander summary {
-        color: #0066cc !important;
-        font-weight: bold !important;
-        font-size: 1.2rem !important;
-    }
-    
-    /* Métricas */
-    .stMetric {
-        background-color: #ffffff;
-        padding: 1rem;
-        border-radius: 10px;
-        border: 2px solid #000000;
-    }
-    
-    .stMetric label {
-        color: #000000 !important;
-        font-weight: bold !important;
-    }
-    
-    .stMetric value {
-        color: #0066cc !important;
-        font-weight: bold !important;
-        font-size: 1.5rem !important;
-    }
-    
-    /* DataFrames */
-    .stDataFrame {
-        border: 2px solid #000000 !important;
-        border-radius: 10px !important;
-    }
-    
-    .stDataFrame th {
-        background-color: #0066cc !important;
-        color: white !important;
-        font-weight: bold !important;
-    }
-    
-    .stDataFrame td {
-        color: #000000 !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# [El resto del código permanece igual desde aquí...]
 # Inicialización de variables de sesión
 def init_session_state():
     if 'pagina_actual' not in st.session_state:
@@ -436,16 +318,10 @@ def cargar_jugada(archivo):
                 evento = jugada["datos"][f"evento_{i}"]
                 st.session_state[f'deporte_simple_{i}'] = evento["deporte"]
                 st.session_state[f'liga_simple_{i}'] = evento["liga"]
-                if evento["fecha"] and evento["fecha"] != "None":
-                    try:
-                        st.session_state[f'fecha_simple_{i}'] = datetime.fromisoformat(evento["fecha"]).date()
-                    except:
-                        pass
-                if evento["hora"] and evento["hora"] != "None":
-                    try:
-                        st.session_state[f'hora_simple_{i}'] = datetime.fromisoformat(evento["hora"]).time()
-                    except:
-                        pass
+                if evento["fecha"]:
+                    st.session_state[f'fecha_simple_{i}'] = datetime.fromisoformat(evento["fecha"]).date()
+                if evento["hora"]:
+                    st.session_state[f'hora_simple_{i}'] = datetime.fromisoformat(evento["hora"]).time()
                 st.session_state[f'local_simple_{i}'] = evento["local"]
                 st.session_state[f'vis_simple_{i}'] = evento["visitante"]
                 st.session_state[f'res_local_simple_{i}'] = evento["resultado_local"]
@@ -541,8 +417,8 @@ def generar_columnas(jugadas, filtros):
 # Menú lateral
 with st.sidebar:
     st.markdown("""
-    <div style='text-align: center; padding: 20px; background-color: #0066cc; border-radius: 10px; margin-bottom: 20px;'>
-        <h1 style='color: white; margin: 0; font-size: 2rem;'>🎲 MENÚ</h1>
+    <div style='text-align: center; padding: 20px;'>
+        <h1 style='color: #667eea;'>🎲 MENÚ</h1>
     </div>
     """, unsafe_allow_html=True)
     
@@ -601,7 +477,7 @@ if st.session_state.pagina_actual == "Apuesta Simple":
                     st.session_state.eventos_count -= 1
                     st.rerun()
         with eventos_col2:
-            st.markdown(f"<div class='contador-negro'>{st.session_state.eventos_count:02d}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align: center; font-size: 1.5rem; font-weight: bold;'>{st.session_state.eventos_count:02d}</div>", unsafe_allow_html=True)
         with eventos_col3:
             if st.button("➕", key="plus_eventos_simple"):
                 if st.session_state.eventos_count < 30:
@@ -616,8 +492,8 @@ if st.session_state.pagina_actual == "Apuesta Simple":
             if f'bolita_simple_{i}' in st.session_state and st.session_state[f'bolita_simple_{i}'] == 'verde':
                 eventos_ganados += 1
         
-        color_class = "contador-verde" if eventos_ganados == st.session_state.eventos_count else "contador-negro"
-        st.markdown(f'<div style="text-align: center; font-size: 1.8rem; font-weight: bold;" class="{color_class}">{eventos_ganados:02d}/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
+        color_class = "contador-verde" if eventos_ganados == st.session_state.eventos_count else "contador-normal"
+        st.markdown(f'<div style="text-align: center; font-size: 1.5rem; font-weight: bold;" class="{color_class}">{eventos_ganados:02d}/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
@@ -699,17 +575,14 @@ if st.session_state.pagina_actual == "Apuesta Simple":
                     st.session_state[f'base_simple_{i}'] = '1'
                 
                 with base_col1:
-                    btn_class = "base-btn-selected" if st.session_state[f'base_simple_{i}'] == '1' else "base-btn"
                     if st.button("1", key=f'base1_simple_{i}'):
                         st.session_state[f'base_simple_{i}'] = '1'
                         st.rerun()
                 with base_col2:
-                    btn_class = "base-btn-selected" if st.session_state[f'base_simple_{i}'] == 'x' else "base-btn"
                     if st.button("X", key=f'basex_simple_{i}'):
                         st.session_state[f'base_simple_{i}'] = 'x'
                         st.rerun()
                 with base_col3:
-                    btn_class = "base-btn-selected" if st.session_state[f'base_simple_{i}'] == '2' else "base-btn"
                     if st.button("2", key=f'base2_simple_{i}'):
                         st.session_state[f'base_simple_{i}'] = '2'
                         st.rerun()
@@ -808,9 +681,6 @@ if st.session_state.pagina_actual == "Apuesta Simple":
         
         st.markdown('<div class="success-message">✅ Apuesta registrada correctamente!</div>', unsafe_allow_html=True)
 
-# [El resto de las páginas (Apuesta Múltiple, Jugadas, Filtros, Columnas, Estadísticas, Billetera, Guardar, Exportar) 
-# permanecen exactamente igual que en el código anterior]
-
 # Página de Apuesta Múltiple
 elif st.session_state.pagina_actual == "Apuesta Múltiple":
     col1, col2, col3 = st.columns([1, 1, 2])
@@ -824,7 +694,7 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
                     st.session_state.eventos_count -= 1
                     st.rerun()
         with eventos_col2:
-            st.markdown(f"<div class='contador-negro'>{st.session_state.eventos_count:02d}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align: center; font-size: 1.5rem; font-weight: bold;'>{st.session_state.eventos_count:02d}</div>", unsafe_allow_html=True)
         with eventos_col3:
             if st.button("➕", key="plus_eventos_multiple"):
                 if st.session_state.eventos_count < 30:
@@ -852,10 +722,10 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
                                 aciertos += 1
                 max_aciertos = max(max_aciertos, aciertos)
             
-            color_class = "contador-verde" if max_aciertos >= st.session_state.get('aciertos_min', 0) else "contador-negro"
-            st.markdown(f'<div style="text-align: center; font-size: 1.8rem; font-weight: bold;" class="{color_class}">{max_aciertos:02d}/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
+            color_class = "contador-verde" if max_aciertos >= st.session_state.get('aciertos_min', 0) else "contador-normal"
+            st.markdown(f'<div style="text-align: center; font-size: 1.5rem; font-weight: bold;" class="{color_class}">{max_aciertos:02d}/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<div style="text-align: center; font-size: 1.8rem; font-weight: bold;" class="contador-negro">00/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="text-align: center; font-size: 1.5rem; font-weight: bold;" class="contador-normal">00/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
     
     with col3:
         st.markdown("### 🎯 Aciertos Base")
@@ -876,7 +746,7 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
                     st.session_state.aciertos_min += 1
                     st.rerun()
         
-        st.markdown("<h3 style='text-align: center; color: #000000; font-weight: bold;'>A</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align: center;'>A</h3>", unsafe_allow_html=True)
         
         col_min2, col_medio2, col_max2 = st.columns([2, 1, 2])
         with col_min2:
@@ -1151,7 +1021,7 @@ elif st.session_state.pagina_actual == "Jugadas":
                     st.session_state.eventos_count -= 1
                     st.rerun()
         with eventos_col2:
-            st.markdown(f"<div class='contador-negro'>{st.session_state.eventos_count:02d}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align: center; font-size: 1.5rem; font-weight: bold;'>{st.session_state.eventos_count:02d}</div>", unsafe_allow_html=True)
         with eventos_col3:
             if st.button("➕", key="plus_eventos_jugadas"):
                 if st.session_state.eventos_count < 30:
@@ -1176,10 +1046,10 @@ elif st.session_state.pagina_actual == "Jugadas":
                             aciertos += 1
                 max_aciertos = max(max_aciertos, aciertos)
             
-            color_class = "contador-verde" if max_aciertos == st.session_state.eventos_count else "contador-negro"
-            st.markdown(f'<div style="text-align: center; font-size: 1.8rem; font-weight: bold;" class="{color_class}">{max_aciertos:02d}/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
+            color_class = "contador-verde" if max_aciertos == st.session_state.eventos_count else "contador-normal"
+            st.markdown(f'<div style="text-align: center; font-size: 1.5rem; font-weight: bold;" class="{color_class}">{max_aciertos:02d}/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<div style="text-align: center; font-size: 1.8rem; font-weight: bold;" class="contador-negro">00/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="text-align: center; font-size: 1.5rem; font-weight: bold;" class="contador-normal">00/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     st.markdown("### 🎯 Eventos - Sistema de Jugadas")
