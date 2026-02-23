@@ -729,3 +729,912 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
     
     with col3:
         st.markdown("### 🎯 Aciertos Base")
+        
+        col_min, col_medio, col_max = st.columns([2, 1, 2])
+        with col_min:
+            if st.button("➖", key="minus_aciertos_min"):
+                if st.session_state.aciertos_min > 0:
+                    st.session_state.aciertos_min -= 1
+                    st.rerun()
+        with col_medio:
+            aciertos_min = st.number_input("Mín", min_value=0, max_value=st.session_state.eventos_count, 
+                                          value=st.session_state.aciertos_min, key="aciertos_min_input", format="%d")
+            st.session_state.aciertos_min = aciertos_min
+        with col_max:
+            if st.button("➕", key="plus_aciertos_min"):
+                if st.session_state.aciertos_min < st.session_state.eventos_count:
+                    st.session_state.aciertos_min += 1
+                    st.rerun()
+        
+        st.markdown("<h3 style='text-align: center;'>A</h3>", unsafe_allow_html=True)
+        
+        col_min2, col_medio2, col_max2 = st.columns([2, 1, 2])
+        with col_min2:
+            if st.button("➖", key="minus_aciertos_max"):
+                if st.session_state.aciertos_max > 0:
+                    st.session_state.aciertos_max -= 1
+                    st.rerun()
+        with col_medio2:
+            aciertos_max = st.number_input("Máx", min_value=0, max_value=st.session_state.eventos_count,
+                                          value=st.session_state.aciertos_max, key="aciertos_max_input", format="%d")
+            st.session_state.aciertos_max = aciertos_max
+        with col_max2:
+            if st.button("➕", key="plus_aciertos_max"):
+                if st.session_state.aciertos_max < st.session_state.eventos_count:
+                    st.session_state.aciertos_max += 1
+                    st.rerun()
+    
+    st.markdown("---")
+    st.markdown("### 🎯 Eventos")
+    
+    # Recopilar jugadas para generar columnas
+    jugadas_multiple = []
+    
+    for i in range(st.session_state.eventos_count):
+        with st.container():
+            st.markdown(f'<div class="evento-card">', unsafe_allow_html=True)
+            st.markdown(f'<div class="evento-titulo">Evento {i+1}</div>', unsafe_allow_html=True)
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                deporte = st.selectbox(
+                    "Deporte",
+                    options=st.session_state.deportes + ["Otro..."],
+                    key=f'deporte_multiple_{i}'
+                )
+                if deporte == "Otro...":
+                    nuevo_deporte = st.text_input("Nuevo deporte", key=f'nuevo_deporte_multiple_{i}')
+                    if nuevo_deporte and nuevo_deporte not in st.session_state.deportes:
+                        st.session_state.deportes.append(nuevo_deporte)
+                        st.session_state.ligas_por_deporte[nuevo_deporte] = []
+                        st.rerun()
+            
+            with col2:
+                ligas_disponibles = st.session_state.ligas_por_deporte.get(
+                    deporte if deporte != "Otro..." else st.session_state.deportes[-1],
+                    []
+                )
+                liga = st.selectbox(
+                    "Liga",
+                    options=ligas_disponibles + ["Otra..."],
+                    key=f'liga_multiple_{i}'
+                )
+                if liga == "Otra...":
+                    nueva_liga = st.text_input("Nueva liga", key=f'nueva_liga_multiple_{i}')
+                    if nueva_liga and nueva_liga not in ligas_disponibles:
+                        st.session_state.ligas_por_deporte[deporte].append(nueva_liga)
+                        st.rerun()
+            
+            with col3:
+                fecha = st.date_input("Fecha", key=f'fecha_multiple_{i}')
+            
+            with col4:
+                hora = st.time_input("Hora", value=time(12, 0), key=f'hora_multiple_{i}')
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                equipo_local = st.text_input("Equipo Local", key=f'local_multiple_{i}')
+            
+            with col2:
+                resultado_local = st.number_input("Resultado Local", min_value=0, step=1, key=f'res_local_multiple_{i}', format="%d")
+            
+            with col3:
+                resultado_visitante = st.number_input("Resultado Visitante", min_value=0, step=1, key=f'res_vis_multiple_{i}', format="%d")
+            
+            with col4:
+                equipo_visitante = st.text_input("Equipo Visitante", key=f'vis_multiple_{i}')
+            
+            col1, col2, col3, col4, col5 = st.columns(5)
+            
+            with col1:
+                cuota_local = st.number_input("Cuota Local", min_value=1.0, value=1.0, step=0.1, key=f'cuota_local_multiple_{i}', format="%.2f")
+            
+            with col2:
+                cuota_empate = st.number_input("Cuota Empate", min_value=1.0, value=1.0, step=0.1, key=f'cuota_empate_multiple_{i}', format="%.2f")
+            
+            with col3:
+                cuota_visitante = st.number_input("Cuota Visitante", min_value=1.0, value=1.0, step=0.1, key=f'cuota_vis_multiple_{i}', format="%.2f")
+            
+            with col4:
+                st.markdown("**Jugada**")
+                opciones_jugada = []
+                col_j1, col_j2, col_j3 = st.columns(3)
+                with col_j1:
+                    if st.checkbox("1", key=f'jugada_1_{i}'):
+                        opciones_jugada.append('1')
+                with col_j2:
+                    if st.checkbox("X", key=f'jugada_x_{i}'):
+                        opciones_jugada.append('x')
+                with col_j3:
+                    if st.checkbox("2", key=f'jugada_2_{i}'):
+                        opciones_jugada.append('2')
+                
+                jugada_str = ''.join(opciones_jugada) if opciones_jugada else '1'
+                st.session_state[f'jugada_multiple_{i}'] = jugada_str
+            
+            with col5:
+                st.markdown("**Base**")
+                base_col1, base_col2, base_col3 = st.columns(3)
+                
+                if f'base_multiple_{i}' not in st.session_state:
+                    st.session_state[f'base_multiple_{i}'] = '1'
+                
+                with base_col1:
+                    if st.button("1", key=f'base1_multiple_{i}'):
+                        st.session_state[f'base_multiple_{i}'] = '1'
+                        st.rerun()
+                with base_col2:
+                    if st.button("X", key=f'basex_multiple_{i}'):
+                        st.session_state[f'base_multiple_{i}'] = 'x'
+                        st.rerun()
+                with base_col3:
+                    if st.button("2", key=f'base2_multiple_{i}'):
+                        st.session_state[f'base_multiple_{i}'] = '2'
+                        st.rerun()
+            
+            # Guardar datos para generación de columnas
+            jugadas_multiple.append({
+                'jugada': st.session_state.get(f'jugada_multiple_{i}', '1'),
+                'base': st.session_state.get(f'base_multiple_{i}', '1'),
+                'cuota_local': cuota_local,
+                'cuota_empate': cuota_empate,
+                'cuota_visitante': cuota_visitante
+            })
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.markdown("### 💰 Monto Total")
+    monto_total = st.number_input("Monto Total (€)", min_value=0.0, value=0.0, step=10.0, key="monto_multiple", format="%.2f")
+    
+    # Generar columnas
+    if st.button("🔄 GENERAR COLUMNAS", use_container_width=True):
+        # Crear filtros para la generación
+        filtros_temp = {
+            'base_min': st.session_state.aciertos_min,
+            'base_max': st.session_state.aciertos_max,
+            'signos_1': (0, 0),
+            'signos_x': (0, 0),
+            'signos_2': (0, 0),
+            'consecutivos_1': (0, 0),
+            'consecutivos_x': (0, 0),
+            'consecutivos_2': (0, 0),
+            'interrupciones': (0, 0)
+        }
+        
+        columnas = generar_columnas(jugadas_multiple, filtros_temp)
+        st.session_state.columnas_generadas_multiple = columnas
+        
+        st.markdown(f'<div class="info-message">📊 Se generaron {len(columnas)} columnas</div>', unsafe_allow_html=True)
+    
+    # Mostrar columnas generadas
+    if 'columnas_generadas_multiple' in st.session_state and st.session_state.columnas_generadas_multiple:
+        st.markdown("### 📊 COLUMNAS GENERADAS")
+        
+        monto_por_columna = monto_total / len(st.session_state.columnas_generadas_multiple) if len(st.session_state.columnas_generadas_multiple) > 0 else 0
+        
+        for idx, columna in enumerate(st.session_state.columnas_generadas_multiple):
+            with st.container():
+                st.markdown(f'<div class="columna-card">', unsafe_allow_html=True)
+                
+                col1, col2, col3, col4, col5 = st.columns([3, 2, 2, 2, 1])
+                
+                with col1:
+                    st.markdown(f"**Columna {idx+1}:** {' - '.join(columna)}")
+                
+                with col2:
+                    # Calcular cuota total
+                    cuota_columna = 1
+                    for i, signo in enumerate(columna):
+                        if i < len(jugadas_multiple):
+                            if signo == '1':
+                                cuota_columna *= jugadas_multiple[i]['cuota_local']
+                            elif signo == 'x':
+                                cuota_columna *= jugadas_multiple[i]['cuota_empate']
+                            else:
+                                cuota_columna *= jugadas_multiple[i]['cuota_visitante']
+                    
+                    ganancia_bruta = monto_por_columna * cuota_columna
+                    st.markdown(f"💰 **Bruta:** € {ganancia_bruta:.2f}")
+                
+                with col3:
+                    ganancia_neta = ganancia_bruta - monto_por_columna
+                    st.markdown(f"💵 **Neta:** € {ganancia_neta:.2f}")
+                
+                with col4:
+                    st.markdown(f"📊 **Cuota:** {cuota_columna:.2f}")
+                
+                with col5:
+                    # Determinar si la columna cumple con los aciertos base
+                    if all(st.session_state.get(f'res_local_multiple_{i}', 0) == 0 and 
+                          st.session_state.get(f'res_vis_multiple_{i}', 0) == 0 for i in range(len(columna))):
+                        color_bolita = "roja"
+                    else:
+                        aciertos = 0
+                        for i, signo in enumerate(columna):
+                            if i < st.session_state.eventos_count:
+                                res_local = st.session_state.get(f'res_local_multiple_{i}', 0)
+                                res_vis = st.session_state.get(f'res_vis_multiple_{i}', 0)
+                                base = st.session_state.get(f'base_multiple_{i}', '1')
+                                
+                                if (base == '1' and res_local > res_vis) or \
+                                   (base == 'x' and res_local == res_vis) or \
+                                   (base == '2' and res_local < res_vis):
+                                    if signo == base:
+                                        aciertos += 1
+                        
+                        if aciertos >= st.session_state.aciertos_min and \
+                           aciertos <= st.session_state.aciertos_max:
+                            color_bolita = "verde"
+                        else:
+                            color_bolita = "roja"
+                    
+                    st.markdown(f'<div class="bolita bolita-{color_bolita}"></div>', unsafe_allow_html=True)
+                
+                st.markdown('</div>', unsafe_allow_html=True)
+    
+    if st.button("📝 REGISTRAR APUESTA MÚLTIPLE", use_container_width=True):
+        apuesta = {
+            "fecha": datetime.now().isoformat(),
+            "tipo": "Apuesta Múltiple",
+            "eventos_totales": st.session_state.eventos_count,
+            "aciertos_min": st.session_state.aciertos_min,
+            "aciertos_max": st.session_state.aciertos_max,
+            "monto_total": monto_total,
+            "num_columnas": len(st.session_state.columnas_generadas_multiple),
+            "monto_por_columna": monto_por_columna if 'columnas_generadas_multiple' in st.session_state else 0,
+            "detalles": []
+        }
+        
+        for i in range(st.session_state.eventos_count):
+            detalle = {
+                "deporte": st.session_state.get(f'deporte_multiple_{i}', ''),
+                "liga": st.session_state.get(f'liga_multiple_{i}', ''),
+                "fecha": str(st.session_state.get(f'fecha_multiple_{i}', '')),
+                "hora": str(st.session_state.get(f'hora_multiple_{i}', '')),
+                "equipo_local": st.session_state.get(f'local_multiple_{i}', ''),
+                "equipo_visitante": st.session_state.get(f'vis_multiple_{i}', ''),
+                "resultado_local": st.session_state.get(f'res_local_multiple_{i}', 0),
+                "resultado_visitante": st.session_state.get(f'res_vis_multiple_{i}', 0),
+                "jugada": st.session_state.get(f'jugada_multiple_{i}', '1'),
+                "base": st.session_state.get(f'base_multiple_{i}', '1')
+            }
+            apuesta["detalles"].append(detalle)
+        
+        st.session_state.apuestas.append(apuesta)
+        st.session_state.saldo -= monto_total
+        guardar_apuestas()
+        
+        st.markdown('<div class="success-message">✅ Apuesta múltiple registrada correctamente!</div>', unsafe_allow_html=True)
+
+# Página de Jugadas (Sistema)
+elif st.session_state.pagina_actual == "Jugadas":
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        st.markdown("### 📅 Eventos")
+        eventos_col1, eventos_col2, eventos_col3 = st.columns([1, 1, 1])
+        with eventos_col1:
+            if st.button("➖", key="minus_eventos_jugadas"):
+                if st.session_state.eventos_count > 1:
+                    st.session_state.eventos_count -= 1
+                    st.rerun()
+        with eventos_col2:
+            st.markdown(f"<div style='text-align: center; font-size: 1.5rem; font-weight: bold;'>{st.session_state.eventos_count:02d}</div>", unsafe_allow_html=True)
+        with eventos_col3:
+            if st.button("➕", key="plus_eventos_jugadas"):
+                if st.session_state.eventos_count < 30:
+                    st.session_state.eventos_count += 1
+                    st.rerun()
+    
+    with col2:
+        st.markdown("### 📊 Progreso")
+        if st.session_state.columnas_generadas:
+            # Calcular máximo de aciertos entre columnas
+            max_aciertos = 0
+            for columna in st.session_state.columnas_generadas:
+                aciertos = 0
+                for i, signo in enumerate(columna):
+                    if i < st.session_state.eventos_count:
+                        res_local = st.session_state.get(f'res_local_jugada_{i}', 0)
+                        res_vis = st.session_state.get(f'res_vis_jugada_{i}', 0)
+                        
+                        if (signo == '1' and res_local > res_vis) or \
+                           (signo == 'x' and res_local == res_vis) or \
+                           (signo == '2' and res_local < res_vis):
+                            aciertos += 1
+                max_aciertos = max(max_aciertos, aciertos)
+            
+            color_class = "contador-verde" if max_aciertos == st.session_state.eventos_count else "contador-normal"
+            st.markdown(f'<div style="text-align: center; font-size: 1.5rem; font-weight: bold;" class="{color_class}">{max_aciertos:02d}/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div style="text-align: center; font-size: 1.5rem; font-weight: bold;" class="contador-normal">00/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
+    
+    st.markdown("---")
+    st.markdown("### 🎯 Eventos - Sistema de Jugadas")
+    st.markdown('<div class="info-message">📝 Complete los datos de cada evento para el sistema</div>', unsafe_allow_html=True)
+    
+    jugadas_sistema = []
+    
+    for i in range(st.session_state.eventos_count):
+        with st.container():
+            st.markdown(f'<div class="evento-card">', unsafe_allow_html=True)
+            st.markdown(f'<div class="evento-titulo">Evento {i+1}</div>', unsafe_allow_html=True)
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                deporte = st.selectbox(
+                    "Deporte",
+                    options=st.session_state.deportes + ["Otro..."],
+                    key=f'deporte_jugada_{i}'
+                )
+                if deporte == "Otro...":
+                    nuevo_deporte = st.text_input("Nuevo deporte", key=f'nuevo_deporte_jugada_{i}')
+                    if nuevo_deporte and nuevo_deporte not in st.session_state.deportes:
+                        st.session_state.deportes.append(nuevo_deporte)
+                        st.session_state.ligas_por_deporte[nuevo_deporte] = []
+                        st.rerun()
+            
+            with col2:
+                ligas_disponibles = st.session_state.ligas_por_deporte.get(
+                    deporte if deporte != "Otro..." else st.session_state.deportes[-1],
+                    []
+                )
+                liga = st.selectbox(
+                    "Liga",
+                    options=ligas_disponibles + ["Otra..."],
+                    key=f'liga_jugada_{i}'
+                )
+                if liga == "Otra...":
+                    nueva_liga = st.text_input("Nueva liga", key=f'nueva_liga_jugada_{i}')
+                    if nueva_liga and nueva_liga not in ligas_disponibles:
+                        st.session_state.ligas_por_deporte[deporte].append(nueva_liga)
+                        st.rerun()
+            
+            with col3:
+                fecha = st.date_input("Fecha", key=f'fecha_jugada_{i}')
+            
+            with col4:
+                hora = st.time_input("Hora", value=time(12, 0), key=f'hora_jugada_{i}')
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                equipo_local = st.text_input("Equipo Local", key=f'local_jugada_{i}')
+            
+            with col2:
+                resultado_local = st.number_input("Resultado Local", min_value=0, step=1, key=f'res_local_jugada_{i}', format="%d")
+            
+            with col3:
+                resultado_visitante = st.number_input("Resultado Visitante", min_value=0, step=1, key=f'res_vis_jugada_{i}', format="%d")
+            
+            with col4:
+                equipo_visitante = st.text_input("Equipo Visitante", key=f'vis_jugada_{i}')
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                cuota_local = st.number_input("Cuota Local", min_value=1.0, value=1.0, step=0.1, key=f'cuota_local_jugada_{i}', format="%.2f")
+            
+            with col2:
+                cuota_empate = st.number_input("Cuota Empate", min_value=1.0, value=1.0, step=0.1, key=f'cuota_empate_jugada_{i}', format="%.2f")
+            
+            with col3:
+                cuota_visitante = st.number_input("Cuota Visitante", min_value=1.0, value=1.0, step=0.1, key=f'cuota_vis_jugada_{i}', format="%.2f")
+            
+            with col4:
+                st.markdown("**Jugada**")
+                opciones_jugada = []
+                col_j1, col_j2, col_j3 = st.columns(3)
+                with col_j1:
+                    if st.checkbox("1", key=f'jugada_sis_1_{i}'):
+                        opciones_jugada.append('1')
+                with col_j2:
+                    if st.checkbox("X", key=f'jugada_sis_x_{i}'):
+                        opciones_jugada.append('x')
+                with col_j3:
+                    if st.checkbox("2", key=f'jugada_sis_2_{i}'):
+                        opciones_jugada.append('2')
+                
+                jugada_str = ''.join(opciones_jugada) if opciones_jugada else '1'
+                st.session_state[f'jugada_sistema_{i}'] = jugada_str
+            
+            # Guardar datos para filtros
+            jugadas_sistema.append({
+                'equipo_local': equipo_local,
+                'equipo_visitante': equipo_visitante,
+                'jugada': st.session_state.get(f'jugada_sistema_{i}', '1'),
+                'base': '1',  # Base por defecto, se modificará en filtros
+                'cuota_local': cuota_local,
+                'cuota_empate': cuota_empate,
+                'cuota_visitante': cuota_visitante
+            })
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.markdown("### 💰 Monto Total del Sistema")
+    monto_sistema = st.number_input("Monto Total (€)", min_value=0.0, value=0.0, step=10.0, key="monto_sistema", format="%.2f")
+    
+    if st.button("💾 GUARDAR JUGADAS", use_container_width=True):
+        st.session_state.jugadas_sistema = jugadas_sistema
+        st.markdown('<div class="success-message">✅ Jugadas guardadas correctamente</div>', unsafe_allow_html=True)
+
+# Página de Filtros
+elif st.session_state.pagina_actual == "Filtros":
+    st.markdown("### 🔍 FILTROS DEL SISTEMA")
+    
+    if not st.session_state.jugadas_sistema:
+        st.markdown('<div class="info-message">⚠️ Primero debe crear las jugadas en la página "Jugadas"</div>', unsafe_allow_html=True)
+    else:
+        st.markdown("#### 📋 SISTEMA JUGADO")
+        
+        # Mostrar lista de partidos
+        for i, jugada in enumerate(st.session_state.jugadas_sistema):
+            with st.container():
+                st.markdown(f'<div class="evento-card">', unsafe_allow_html=True)
+                
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.markdown(f"**Local:** {jugada['equipo_local']}")
+                
+                with col2:
+                    st.markdown(f"**Visitante:** {jugada['equipo_visitante']}")
+                
+                with col3:
+                    st.markdown(f"**Signos:** {jugada['jugada']}")
+                
+                with col4:
+                    # Selector de base para cada partido
+                    base_options = list(jugada['jugada'])
+                    if base_options:
+                        base = st.selectbox(
+                            f"Base {i+1}",
+                            options=base_options,
+                            key=f'base_filtro_{i}'
+                        )
+                        st.session_state.jugadas_sistema[i]['base'] = base
+                
+                st.markdown('</div>', unsafe_allow_html=True)
+        
+        st.markdown("#### 🎯 FILTROS SISTEMA")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown('<div class="filtro-card">', unsafe_allow_html=True)
+            st.markdown("**📊 Filtro BASE**")
+            
+            base_min_col, base_max_col = st.columns(2)
+            with base_min_col:
+                base_min = st.number_input("Mínimo puntos BASE", min_value=0, 
+                                          max_value=len(st.session_state.jugadas_sistema),
+                                          value=st.session_state.filtros_sistema['base_min'],
+                                          key="base_min_input", format="%d")
+            with base_max_col:
+                base_max = st.number_input("Máximo puntos BASE", min_value=0,
+                                          max_value=len(st.session_state.jugadas_sistema),
+                                          value=st.session_state.filtros_sistema['base_max'] if st.session_state.filtros_sistema['base_max'] > 0 else len(st.session_state.jugadas_sistema),
+                                          key="base_max_input", format="%d")
+            
+            st.session_state.filtros_sistema['base_min'] = base_min
+            st.session_state.filtros_sistema['base_max'] = base_max
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            st.markdown('<div class="filtro-card">', unsafe_allow_html=True)
+            st.markdown("**🔢 Filtro SIGNOS**")
+            
+            for signo in ['1', 'x', '2']:
+                st.markdown(f"**Signo {signo}**")
+                col_min, col_max = st.columns(2)
+                with col_min:
+                    min_val = st.number_input(f"Mínimo {signo}", min_value=0,
+                                             max_value=len(st.session_state.jugadas_sistema),
+                                             value=st.session_state.filtros_sistema[f'signos_{signo}'][0],
+                                             key=f'signos_{signo}_min', format="%d")
+                with col_max:
+                    max_val = st.number_input(f"Máximo {signo}", min_value=0,
+                                             max_value=len(st.session_state.jugadas_sistema),
+                                             value=st.session_state.filtros_sistema[f'signos_{signo}'][1],
+                                             key=f'signos_{signo}_max', format="%d")
+                st.session_state.filtros_sistema[f'signos_{signo}'] = (min_val, max_val)
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown('<div class="filtro-card">', unsafe_allow_html=True)
+            st.markdown("**📈 Filtro CONSECUTIVOS**")
+            
+            for signo in ['1', 'x', '2']:
+                st.markdown(f"**Consecutivos {signo}**")
+                col_min, col_max = st.columns(2)
+                with col_min:
+                    min_val = st.number_input(f"Mínimo consec {signo}", min_value=0,
+                                             max_value=len(st.session_state.jugadas_sistema),
+                                             value=st.session_state.filtros_sistema[f'consecutivos_{signo}'][0],
+                                             key=f'consec_{signo}_min', format="%d")
+                with col_max:
+                    max_val = st.number_input(f"Máximo consec {signo}", min_value=0,
+                                             max_value=len(st.session_state.jugadas_sistema),
+                                             value=st.session_state.filtros_sistema[f'consecutivos_{signo}'][1],
+                                             key=f'consec_{signo}_max', format="%d")
+                st.session_state.filtros_sistema[f'consecutivos_{signo}'] = (min_val, max_val)
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            st.markdown('<div class="filtro-card">', unsafe_allow_html=True)
+            st.markdown("**🔄 Filtro INTERRUPCIONES**")
+            
+            col_min, col_max = st.columns(2)
+            with col_min:
+                interrupciones_min = st.number_input("Mínimo interrupciones", min_value=0,
+                                                     max_value=len(st.session_state.jugadas_sistema),
+                                                     value=st.session_state.filtros_sistema['interrupciones'][0],
+                                                     key="interrupciones_min", format="%d")
+            with col_max:
+                interrupciones_max = st.number_input("Máximo interrupciones", min_value=0,
+                                                     max_value=len(st.session_state.jugadas_sistema),
+                                                     value=st.session_state.filtros_sistema['interrupciones'][1],
+                                                     key="interrupciones_max", format="%d")
+            st.session_state.filtros_sistema['interrupciones'] = (interrupciones_min, interrupciones_max)
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        if st.button("💾 GUARDAR FILTROS", use_container_width=True):
+            st.markdown('<div class="success-message">✅ Filtros guardados correctamente</div>', unsafe_allow_html=True)
+
+# Página de Columnas
+elif st.session_state.pagina_actual == "Columnas":
+    st.markdown("### 📊 COLUMNAS GENERADAS")
+    
+    if not st.session_state.jugadas_sistema:
+        st.markdown('<div class="info-message">⚠️ Primero debe crear las jugadas en la página "Jugadas"</div>', unsafe_allow_html=True)
+    else:
+        if st.button("🔄 GENERAR COLUMNAS", use_container_width=True):
+            columnas = generar_columnas(st.session_state.jugadas_sistema, st.session_state.filtros_sistema)
+            st.session_state.columnas_generadas = columnas
+            st.markdown(f'<div class="info-message">📊 Se generaron {len(columnas)} columnas</div>', unsafe_allow_html=True)
+        
+        if st.session_state.columnas_generadas:
+            monto_total = st.session_state.get('monto_sistema', 0)
+            monto_por_columna = monto_total / len(st.session_state.columnas_generadas) if len(st.session_state.columnas_generadas) > 0 else 0
+            
+            st.markdown(f"**💰 Monto por columna: € {monto_por_columna:.2f}**")
+            
+            for idx, columna in enumerate(st.session_state.columnas_generadas):
+                with st.container():
+                    st.markdown(f'<div class="columna-card">', unsafe_allow_html=True)
+                    
+                    col1, col2, col3, col4, col5 = st.columns([3, 2, 2, 2, 1])
+                    
+                    with col1:
+                        st.markdown(f"**Columna {idx+1}:** {' - '.join(columna)}")
+                    
+                    with col2:
+                        # Calcular cuota total
+                        cuota_columna = 1
+                        for i, signo in enumerate(columna):
+                            if i < len(st.session_state.jugadas_sistema):
+                                if signo == '1':
+                                    cuota_columna *= st.session_state.jugadas_sistema[i]['cuota_local']
+                                elif signo == 'x':
+                                    cuota_columna *= st.session_state.jugadas_sistema[i]['cuota_empate']
+                                else:
+                                    cuota_columna *= st.session_state.jugadas_sistema[i]['cuota_visitante']
+                        
+                        ganancia_bruta = monto_por_columna * cuota_columna
+                        st.markdown(f"💰 **Bruta:** € {ganancia_bruta:.2f}")
+                    
+                    with col3:
+                        ganancia_neta = ganancia_bruta - monto_por_columna
+                        st.markdown(f"💵 **Neta:** € {ganancia_neta:.2f}")
+                    
+                    with col4:
+                        st.markdown(f"📊 **Cuota:** {cuota_columna:.2f}")
+                    
+                    with col5:
+                        # Determinar estado de la columna
+                        if all(st.session_state.get(f'res_local_jugada_{i}', 0) == 0 and 
+                              st.session_state.get(f'res_vis_jugada_{i}', 0) == 0 for i in range(len(columna))):
+                            color_bolita = "roja"
+                        else:
+                            aciertos = 0
+                            for i, signo in enumerate(columna):
+                                if i < st.session_state.eventos_count:
+                                    res_local = st.session_state.get(f'res_local_jugada_{i}', 0)
+                                    res_vis = st.session_state.get(f'res_vis_jugada_{i}', 0)
+                                    
+                                    if (signo == '1' and res_local > res_vis) or \
+                                       (signo == 'x' and res_local == res_vis) or \
+                                       (signo == '2' and res_local < res_vis):
+                                        aciertos += 1
+                            
+                            if aciertos == len(columna):
+                                color_bolita = "verde"
+                            else:
+                                color_bolita = "roja"
+                        
+                        st.markdown(f'<div class="bolita bolita-{color_bolita}"></div>', unsafe_allow_html=True)
+                    
+                    st.markdown('</div>', unsafe_allow_html=True)
+            
+            if st.button("📝 REGISTRAR SISTEMA", use_container_width=True):
+                apuesta = {
+                    "fecha": datetime.now().isoformat(),
+                    "tipo": "Sistema",
+                    "eventos_totales": len(st.session_state.jugadas_sistema),
+                    "num_columnas": len(st.session_state.columnas_generadas),
+                    "monto_total": monto_total,
+                    "monto_por_columna": monto_por_columna,
+                    "filtros": st.session_state.filtros_sistema,
+                    "detalles": st.session_state.jugadas_sistema
+                }
+                
+                st.session_state.apuestas.append(apuesta)
+                st.session_state.saldo -= monto_total
+                guardar_apuestas()
+                
+                st.markdown('<div class="success-message">✅ Sistema registrado correctamente!</div>', unsafe_allow_html=True)
+
+# Página de Estadísticas de Equipos
+elif st.session_state.pagina_actual == "Est. Equipos":
+    st.markdown("### ⚽ Estadísticas de Equipos")
+    
+    if st.session_state.apuestas:
+        equipos_data = []
+        for apuesta in st.session_state.apuestas:
+            if 'detalles' in apuesta:
+                for detalle in apuesta["detalles"]:
+                    if isinstance(detalle, dict):
+                        if detalle.get("equipo_local"):
+                            equipos_data.append({
+                                "equipo": detalle["equipo_local"],
+                                "resultado": "Ganado" if detalle.get("estado") == "verde" else "Perdido",
+                                "tipo": "Local"
+                            })
+                        if detalle.get("equipo_visitante"):
+                            equipos_data.append({
+                                "equipo": detalle["equipo_visitante"],
+                                "resultado": "Ganado" if detalle.get("estado") == "verde" else "Perdido",
+                                "tipo": "Visitante"
+                            })
+        
+        if equipos_data:
+            df_equipos = pd.DataFrame(equipos_data)
+            
+            stats_equipos = df_equipos.groupby('equipo').agg({
+                'resultado': lambda x: list(x)
+            }).reset_index()
+            
+            stats_equipos['total'] = stats_equipos['resultado'].apply(len)
+            stats_equipos['ganados'] = stats_equipos['resultado'].apply(lambda x: x.count('Ganado'))
+            stats_equipos['perdidos'] = stats_equipos['resultado'].apply(lambda x: x.count('Perdido'))
+            stats_equipos['% victorias'] = (stats_equipos['ganados'] / stats_equipos['total'] * 100).round(1)
+            
+            # Ordenar por % de victorias
+            stats_equipos = stats_equipos.sort_values('% victorias', ascending=False)
+            
+            st.dataframe(
+                stats_equipos[['equipo', 'total', 'ganados', 'perdidos', '% victorias']],
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    'equipo': 'Equipo',
+                    'total': 'Total Partidos',
+                    'ganados': 'Victorias',
+                    'perdidos': 'Derrotas',
+                    '% victorias': '% Victorias'
+                }
+            )
+            
+            # Gráfico de top equipos
+            top_equipos = stats_equipos.head(10)
+            st.bar_chart(top_equipos.set_index('equipo')['% victorias'])
+        else:
+            st.info("No hay datos de equipos disponibles")
+    else:
+        st.info("No hay apuestas registradas para mostrar estadísticas")
+
+# Página de Estadísticas de Jugadas
+elif st.session_state.pagina_actual == "Est. Jugadas":
+    st.markdown("### 📈 Estadísticas de Jugadas")
+    
+    if st.session_state.apuestas:
+        total_apuestas = len(st.session_state.apuestas)
+        total_jugado = 0
+        total_ganado = 0
+        
+        for apuesta in st.session_state.apuestas:
+            if "monto_jugado" in apuesta:
+                total_jugado += apuesta["monto_jugado"]
+                total_ganado += apuesta.get("ganancia_bruta", 0)
+            elif "monto_total" in apuesta:
+                total_jugado += apuesta["monto_total"]
+                # Para sistemas, la ganancia se calcula después
+        
+        beneficio_total = total_ganado - total_jugado
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Apuestas", total_apuestas)
+        with col2:
+            st.metric("Total Jugado", f"€ {total_jugado:.2f}")
+        with col3:
+            st.metric("Total Ganado", f"€ {total_ganado:.2f}")
+        with col4:
+            delta_color = "normal" if beneficio_total >= 0 else "inverse"
+            st.metric("Beneficio", f"€ {beneficio_total:.2f}", delta=beneficio_total, delta_color=delta_color)
+        
+        # Tabla de apuestas
+        if st.session_state.apuestas:
+            datos_resumen = []
+            for apuesta in st.session_state.apuestas:
+                fecha = datetime.fromisoformat(apuesta["fecha"]).strftime("%d/%m/%Y %H:%M") if "fecha" in apuesta else "N/A"
+                tipo = apuesta.get("tipo", "N/A")
+                eventos = apuesta.get("eventos_totales", 0)
+                monto = apuesta.get("monto_jugado", apuesta.get("monto_total", 0))
+                ganancia = apuesta.get("ganancia_neta", 0)
+                
+                datos_resumen.append({
+                    "Fecha": fecha,
+                    "Tipo": tipo,
+                    "Eventos": eventos,
+                    "Monto (€)": monto,
+                    "Neto (€)": ganancia
+                })
+            
+            df_resumen = pd.DataFrame(datos_resumen)
+            st.dataframe(df_resumen, use_container_width=True, hide_index=True)
+    else:
+        st.info("No hay apuestas registradas para mostrar estadísticas")
+
+# Página de Billetera
+elif st.session_state.pagina_actual == "Billetera":
+    st.markdown("### 💰 Billetera")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown(f"""
+        <div class="ganancia-card">
+            <h3>Saldo Actual</h3>
+            <div class="ganancia-valor">€ {st.session_state.saldo:.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("### Agregar Fondos")
+        cantidad_agregar = st.number_input("Cantidad (€)", min_value=0.0, value=100.0, step=10.0, format="%.2f")
+        if st.button("Agregar a Billetera"):
+            st.session_state.saldo += cantidad_agregar
+            st.markdown(f'<div class="success-message">✅ Se agregaron € {cantidad_agregar:.2f} a tu billetera</div>', unsafe_allow_html=True)
+            st.rerun()
+    
+    # Historial de movimientos
+    st.markdown("### 📋 Últimos Movimientos")
+    if st.session_state.apuestas:
+        movimientos = []
+        for apuesta in st.session_state.apuestas[-10:]:  # Últimas 10 apuestas
+            fecha = datetime.fromisoformat(apuesta["fecha"]).strftime("%d/%m/%Y") if "fecha" in apuesta else "N/A"
+            tipo = apuesta.get("tipo", "N/A")
+            monto = apuesta.get("monto_jugado", apuesta.get("monto_total", 0))
+            
+            movimientos.append({
+                "Fecha": fecha,
+                "Concepto": f"Apuesta - {tipo}",
+                "Cantidad": f"-€ {monto:.2f}",
+                "Resultado": apuesta.get("ganancia_neta", 0)
+            })
+        
+        df_movimientos = pd.DataFrame(movimientos)
+        st.dataframe(df_movimientos, use_container_width=True, hide_index=True)
+    else:
+        st.info("No hay movimientos recientes")
+
+# Página de Guardar
+elif st.session_state.pagina_actual == "Guardar":
+    st.markdown("### 💾 Guardar Datos")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### Guardar Jugada Actual")
+        nombre_archivo = st.text_input("Nombre del archivo", value="jugada_1")
+        if st.button("💾 Guardar en archivo", use_container_width=True):
+            guardar_jugada(nombre_archivo)
+            st.markdown(f'<div class="success-message">✅ Jugada guardada correctamente en "{nombre_archivo}.json"</div>', unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("#### Cargar Jugada")
+        archivos = [f for f in os.listdir('.') if f.endswith('.json') and f != 'apuestas.json']
+        if archivos:
+            archivo_seleccionado = st.selectbox("Seleccionar archivo", archivos)
+            if st.button("📂 Cargar archivo", use_container_width=True):
+                if cargar_jugada(archivo_seleccionado):
+                    st.markdown('<div class="success-message">✅ Jugada cargada correctamente</div>', unsafe_allow_html=True)
+                    st.rerun()
+        else:
+            st.info("No hay archivos de jugadas guardados")
+
+# Página de Exportar
+elif st.session_state.pagina_actual == "Exportar":
+    st.markdown("### 📤 Exportar Datos")
+    
+    if st.session_state.apuestas:
+        formato = st.radio("Seleccionar formato:", ["JSON", "CSV", "Excel"])
+        
+        if formato == "JSON":
+            json_str = json.dumps(st.session_state.apuestas, indent=2, ensure_ascii=False)
+            st.download_button(
+                label="📥 Descargar JSON",
+                data=json_str,
+                file_name=f"apuestas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json"
+            )
+        
+        elif formato == "CSV":
+            # Preparar datos para CSV
+            datos_exportar = []
+            for apuesta in st.session_state.apuestas:
+                if "detalles" in apuesta and isinstance(apuesta["detalles"], list):
+                    for detalle in apuesta["detalles"]:
+                        fila = {
+                            "Fecha": datetime.fromisoformat(apuesta["fecha"]).strftime("%d/%m/%Y %H:%M") if "fecha" in apuesta else "N/A",
+                            "Tipo": apuesta.get("tipo", "N/A"),
+                            "Deporte": detalle.get("deporte", ""),
+                            "Liga": detalle.get("liga", ""),
+                            "Equipo Local": detalle.get("equipo_local", ""),
+                            "Equipo Visitante": detalle.get("equipo_visitante", ""),
+                            "Resultado Local": detalle.get("resultado_local", 0),
+                            "Resultado Visitante": detalle.get("resultado_visitante", 0),
+                            "Base": detalle.get("base", ""),
+                            "Estado": detalle.get("estado", "")
+                        }
+                        datos_exportar.append(fila)
+            
+            if datos_exportar:
+                df_export = pd.DataFrame(datos_exportar)
+                csv = df_export.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Descargar CSV",
+                    data=csv,
+                    file_name=f"apuestas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv"
+                )
+        
+        else:  # Excel
+            # Preparar datos para Excel
+            datos_exportar = []
+            for apuesta in st.session_state.apuestas:
+                if "detalles" in apuesta and isinstance(apuesta["detalles"], list):
+                    for detalle in apuesta["detalles"]:
+                        fila = {
+                            "Fecha": datetime.fromisoformat(apuesta["fecha"]).strftime("%d/%m/%Y %H:%M") if "fecha" in apuesta else "N/A",
+                            "Tipo": apuesta.get("tipo", "N/A"),
+                            "Deporte": detalle.get("deporte", ""),
+                            "Liga": detalle.get("liga", ""),
+                            "Equipo Local": detalle.get("equipo_local", ""),
+                            "Equipo Visitante": detalle.get("equipo_visitante", ""),
+                            "Resultado Local": detalle.get("resultado_local", 0),
+                            "Resultado Visitante": detalle.get("resultado_visitante", 0),
+                            "Base": detalle.get("base", ""),
+                            "Estado": detalle.get("estado", "")
+                        }
+                        datos_exportar.append(fila)
+            
+            if datos_exportar:
+                df_export = pd.DataFrame(datos_exportar)
+                excel_file = f"apuestas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+                df_export.to_excel(excel_file, index=False)
+                with open(excel_file, 'rb') as f:
+                    st.download_button(
+                        label="📥 Descargar Excel",
+                        data=f,
+                        file_name=excel_file,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+    else:
+        st.info("No hay datos para exportar")
+
+# Pie de página
+st.markdown("---")
+st.markdown("© 2024 App de Apuestas Profesional - Todos los derechos reservados")
