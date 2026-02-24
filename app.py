@@ -108,7 +108,6 @@ st.markdown("""
         font-weight: bold;
         font-size: 1.1rem;
         color: #000000;
-        width: 100%;
     }
     .base-btn:hover {
         background-color: #e6e6e6;
@@ -331,16 +330,6 @@ st.markdown("""
     .stDataFrame td {
         color: #000000 !important;
     }
-    
-    /* Estilos para los botones de base en fila */
-    .base-row {
-        display: flex;
-        gap: 5px;
-        width: 100%;
-    }
-    .base-row .stButton {
-        flex: 1;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -412,13 +401,17 @@ def init_session_state():
     if 'aciertos_max' not in st.session_state:
         st.session_state.aciertos_max = 0
     
-    # Diccionario para almacenar todos los datos del formulario de apuesta simple
+    # Diccionario para almacenar todos los datos de apuesta simple
     if 'apuesta_simple_datos' not in st.session_state:
         st.session_state.apuesta_simple_datos = {}
     
-    # Diccionario para almacenar los estados de las bolitas
-    if 'bolitas_estado' not in st.session_state:
-        st.session_state.bolitas_estado = {}
+    # Diccionario para almacenar datos de apuesta múltiple
+    if 'apuesta_multiple_datos' not in st.session_state:
+        st.session_state.apuesta_multiple_datos = {}
+    
+    # Diccionario para almacenar datos de jugadas
+    if 'jugadas_datos' not in st.session_state:
+        st.session_state.jugadas_datos = {}
 
 init_session_state()
 
@@ -438,6 +431,10 @@ def guardar_jugada(nombre_archivo):
     # Guardar datos específicos según la página
     if st.session_state.pagina_actual == "Apuesta Simple":
         jugada["datos"] = st.session_state.apuesta_simple_datos.copy()
+    elif st.session_state.pagina_actual == "Apuesta Múltiple":
+        jugada["datos"] = st.session_state.apuesta_multiple_datos.copy()
+    elif st.session_state.pagina_actual == "Jugadas":
+        jugada["datos"] = st.session_state.jugadas_datos.copy()
     
     with open(f"{nombre_archivo}.json", 'w', encoding='utf-8') as f:
         json.dump(jugada, f, ensure_ascii=False, indent=2)
@@ -453,33 +450,36 @@ def cargar_jugada(archivo):
         # Cargar datos específicos según la página
         if jugada["tipo"] == "Apuesta Simple":
             st.session_state.apuesta_simple_datos = jugada["datos"].copy()
-            # Actualizar también los estados de las bolitas
-            for key, value in jugada["datos"].items():
-                if key.startswith('res_local_') or key.startswith('res_vis_'):
-                    # Forzar recálculo de bolitas
-                    pass
+        elif jugada["tipo"] == "Apuesta Múltiple":
+            st.session_state.apuesta_multiple_datos = jugada["datos"].copy()
+        elif jugada["tipo"] == "Jugadas":
+            st.session_state.jugadas_datos = jugada["datos"].copy()
         
         return True
     except Exception as e:
         st.error(f"Error al cargar el archivo: {e}")
         return False
 
-# Función para actualizar el estado de una bolita
-def actualizar_estado_bolita(i, resultado_local, resultado_visitante, base):
+# Función para determinar el color de la bolita
+def get_bolita_color(base, resultado_local, resultado_visitante):
     if (base == '1' and resultado_local > resultado_visitante) or \
        (base == 'x' and resultado_local == resultado_visitante) or \
        (base == '2' and resultado_local < resultado_visitante):
-        st.session_state.bolitas_estado[f'bolita_{i}'] = 'verde'
         return 'verde'
     else:
-        st.session_state.bolitas_estado[f'bolita_{i}'] = 'roja'
         return 'roja'
 
 # Función para contar bolitas verdes
-def contar_bolitas_verdes():
+def contar_bolitas_verdes_simple():
     count = 0
     for i in range(st.session_state.eventos_count):
-        if st.session_state.bolitas_estado.get(f'bolita_{i}', 'roja') == 'verde':
+        base = st.session_state.apuesta_simple_datos.get(f'base_simple_{i}', '1')
+        res_local = st.session_state.apuesta_simple_datos.get(f'res_local_simple_{i}', 0)
+        res_vis = st.session_state.apuesta_simple_datos.get(f'res_vis_simple_{i}', 0)
+        
+        if (base == '1' and res_local > res_vis) or \
+           (base == 'x' and res_local == res_vis) or \
+           (base == '2' and res_local < res_vis):
             count += 1
     return count
 
@@ -561,14 +561,6 @@ def generar_columnas(jugadas, filtros):
     
     return columnas_filtradas
 
-# Función para seleccionar base en apuesta simple
-def seleccionar_base_simple(i, base):
-    st.session_state.apuesta_simple_datos[f'base_simple_{i}'] = base
-    # Actualizar bolita si hay resultados
-    res_local = st.session_state.apuesta_simple_datos.get(f'res_local_simple_{i}', 0)
-    res_vis = st.session_state.apuesta_simple_datos.get(f'res_vis_simple_{i}', 0)
-    actualizar_estado_bolita(i, res_local, res_vis, base)
-
 # Menú lateral
 with st.sidebar:
     st.markdown("""
@@ -646,7 +638,7 @@ if st.session_state.pagina_actual == "Apuesta Simple":
             if st.button("➕", key="plus_eventos_simple"):
                 if st.session_state.eventos_count < 30:
                     st.session_state.eventos_count += 1
-                    # Inicializar datos para el nuevo evento
+                    # Inicializar base para el nuevo evento
                     i = st.session_state.eventos_count - 1
                     if f'base_simple_{i}' not in st.session_state.apuesta_simple_datos:
                         st.session_state.apuesta_simple_datos[f'base_simple_{i}'] = '1'
@@ -654,8 +646,8 @@ if st.session_state.pagina_actual == "Apuesta Simple":
     
     with col2:
         st.markdown("### 🎯 Aciertos")
-        # Calcular eventos ganados usando el estado de las bolitas
-        eventos_ganados = contar_bolitas_verdes()
+        # Calcular eventos ganados usando la función que cuenta bolitas verdes
+        eventos_ganados = contar_bolitas_verdes_simple()
         
         color_class = "contador-verde" if eventos_ganados == st.session_state.eventos_count else "contador-negro"
         st.markdown(f'<div style="text-align: center; font-size: 1.8rem; font-weight: bold;" class="{color_class}">{eventos_ganados:02d}/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
@@ -673,12 +665,12 @@ if st.session_state.pagina_actual == "Apuesta Simple":
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                # Obtener valor guardado o usar default
                 default_deporte = st.session_state.apuesta_simple_datos.get(f'deporte_simple_{i}', 'Fútbol')
+                deporte_index = st.session_state.deportes.index(default_deporte) if default_deporte in st.session_state.deportes else 0
                 deporte = st.selectbox(
                     "Deporte",
                     options=st.session_state.deportes + ["Otro..."],
-                    index=st.session_state.deportes.index(default_deporte) if default_deporte in st.session_state.deportes else 0,
+                    index=deporte_index,
                     key=f'deporte_simple_{i}'
                 )
                 st.session_state.apuesta_simple_datos[f'deporte_simple_{i}'] = deporte
@@ -764,25 +756,24 @@ if st.session_state.pagina_actual == "Apuesta Simple":
                 st.markdown("**Base**")
                 base_actual = st.session_state.apuesta_simple_datos.get(f'base_simple_{i}', '1')
                 
-                # Crear tres botones en fila
                 col_b1, col_b2, col_b3 = st.columns(3)
                 
                 with col_b1:
                     btn_class = "base-btn-selected" if base_actual == '1' else "base-btn"
                     if st.button("1", key=f'base1_simple_{i}'):
-                        seleccionar_base_simple(i, '1')
+                        st.session_state.apuesta_simple_datos[f'base_simple_{i}'] = '1'
                         st.rerun()
                 
                 with col_b2:
                     btn_class = "base-btn-selected" if base_actual == 'x' else "base-btn"
                     if st.button("X", key=f'basex_simple_{i}'):
-                        seleccionar_base_simple(i, 'x')
+                        st.session_state.apuesta_simple_datos[f'base_simple_{i}'] = 'x'
                         st.rerun()
                 
                 with col_b3:
                     btn_class = "base-btn-selected" if base_actual == '2' else "base-btn"
                     if st.button("2", key=f'base2_simple_{i}'):
-                        seleccionar_base_simple(i, '2')
+                        st.session_state.apuesta_simple_datos[f'base_simple_{i}'] = '2'
                         st.rerun()
             
             with col5:
@@ -790,7 +781,7 @@ if st.session_state.pagina_actual == "Apuesta Simple":
                 base = st.session_state.apuesta_simple_datos.get(f'base_simple_{i}', '1')
                 
                 # Determinar color de la bolita
-                color_bolita = actualizar_estado_bolita(i, resultado_local, resultado_visitante, base)
+                color_bolita = get_bolita_color(base, resultado_local, resultado_visitante)
                 
                 st.markdown(f'<div style="display: flex; justify-content: center;"><div class="bolita bolita-{color_bolita}"></div></div>', unsafe_allow_html=True)
             
@@ -863,7 +854,11 @@ if st.session_state.pagina_actual == "Apuesta Simple":
                 "resultado_local": st.session_state.apuesta_simple_datos.get(f'res_local_simple_{i}', 0),
                 "resultado_visitante": st.session_state.apuesta_simple_datos.get(f'res_vis_simple_{i}', 0),
                 "base": st.session_state.apuesta_simple_datos.get(f'base_simple_{i}', '1'),
-                "estado": st.session_state.bolitas_estado.get(f'bolita_{i}', 'roja')
+                "estado": get_bolita_color(
+                    st.session_state.apuesta_simple_datos.get(f'base_simple_{i}', '1'),
+                    st.session_state.apuesta_simple_datos.get(f'res_local_simple_{i}', 0),
+                    st.session_state.apuesta_simple_datos.get(f'res_vis_simple_{i}', 0)
+                )
             }
             apuesta["detalles"].append(detalle)
         
@@ -875,11 +870,10 @@ if st.session_state.pagina_actual == "Apuesta Simple":
         st.markdown('<div class="success-message">✅ Apuesta registrada correctamente!</div>', unsafe_allow_html=True)
 
 # [El resto de las páginas (Apuesta Múltiple, Jugadas, Filtros, Columnas, Estadísticas, Billetera, Guardar, Exportar) 
-# permanecen igual que en el código anterior, pero asegurándose de que usen st.session_state para persistencia]
+# deben ser actualizadas de manera similar para usar diccionarios de datos persistentes]
 
 # Página de Apuesta Múltiple
 elif st.session_state.pagina_actual == "Apuesta Múltiple":
-    # [Mantener el código existente de Apuesta Múltiple]
     col1, col2, col3 = st.columns([1, 1, 2])
     
     with col1:
@@ -908,9 +902,9 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
                 aciertos = 0
                 for i, signo in enumerate(columna):
                     if i < st.session_state.eventos_count:
-                        res_local = st.session_state.get(f'res_local_multiple_{i}', 0)
-                        res_vis = st.session_state.get(f'res_vis_multiple_{i}', 0)
-                        base = st.session_state.get(f'base_multiple_{i}', '1')
+                        res_local = st.session_state.apuesta_multiple_datos.get(f'res_local_multiple_{i}', 0)
+                        res_vis = st.session_state.apuesta_multiple_datos.get(f'res_vis_multiple_{i}', 0)
+                        base = st.session_state.apuesta_multiple_datos.get(f'base_multiple_{i}', '1')
                         
                         if (base == '1' and res_local > res_vis) or \
                            (base == 'x' and res_local == res_vis) or \
@@ -975,11 +969,16 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
+                default_deporte = st.session_state.apuesta_multiple_datos.get(f'deporte_multiple_{i}', 'Fútbol')
+                deporte_index = st.session_state.deportes.index(default_deporte) if default_deporte in st.session_state.deportes else 0
                 deporte = st.selectbox(
                     "Deporte",
                     options=st.session_state.deportes + ["Otro..."],
+                    index=deporte_index,
                     key=f'deporte_multiple_{i}'
                 )
+                st.session_state.apuesta_multiple_datos[f'deporte_multiple_{i}'] = deporte
+                
                 if deporte == "Otro...":
                     nuevo_deporte = st.text_input("Nuevo deporte", key=f'nuevo_deporte_multiple_{i}')
                     if nuevo_deporte and nuevo_deporte not in st.session_state.deportes:
@@ -992,11 +991,16 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
                     deporte if deporte != "Otro..." else st.session_state.deportes[-1],
                     []
                 )
+                default_liga = st.session_state.apuesta_multiple_datos.get(f'liga_multiple_{i}', ligas_disponibles[0] if ligas_disponibles else '')
+                liga_index = ligas_disponibles.index(default_liga) if default_liga in ligas_disponibles else 0
                 liga = st.selectbox(
                     "Liga",
                     options=ligas_disponibles + ["Otra..."],
+                    index=liga_index if ligas_disponibles else 0,
                     key=f'liga_multiple_{i}'
                 )
+                st.session_state.apuesta_multiple_datos[f'liga_multiple_{i}'] = liga
+                
                 if liga == "Otra...":
                     nueva_liga = st.text_input("Nueva liga", key=f'nueva_liga_multiple_{i}')
                     if nueva_liga and nueva_liga not in ligas_disponibles:
@@ -1004,77 +1008,99 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
                         st.rerun()
             
             with col3:
-                fecha = st.date_input("Fecha", key=f'fecha_multiple_{i}')
+                default_fecha = st.session_state.apuesta_multiple_datos.get(f'fecha_multiple_{i}')
+                fecha = st.date_input("Fecha", value=default_fecha if default_fecha else datetime.now().date(), key=f'fecha_multiple_{i}')
+                st.session_state.apuesta_multiple_datos[f'fecha_multiple_{i}'] = fecha
             
             with col4:
-                hora = st.time_input("Hora", value=time(12, 0), key=f'hora_multiple_{i}')
+                default_hora = st.session_state.apuesta_multiple_datos.get(f'hora_multiple_{i}')
+                hora = st.time_input("Hora", value=default_hora if default_hora else time(12, 0), key=f'hora_multiple_{i}')
+                st.session_state.apuesta_multiple_datos[f'hora_multiple_{i}'] = hora
             
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                equipo_local = st.text_input("Equipo Local", key=f'local_multiple_{i}')
+                default_local = st.session_state.apuesta_multiple_datos.get(f'local_multiple_{i}', '')
+                equipo_local = st.text_input("Equipo Local", value=default_local, key=f'local_multiple_{i}')
+                st.session_state.apuesta_multiple_datos[f'local_multiple_{i}'] = equipo_local
             
             with col2:
-                resultado_local = st.number_input("Resultado Local", min_value=0, step=1, key=f'res_local_multiple_{i}', format="%d")
+                default_res_local = st.session_state.apuesta_multiple_datos.get(f'res_local_multiple_{i}', 0)
+                resultado_local = st.number_input("Resultado Local", min_value=0, step=1, value=default_res_local, key=f'res_local_multiple_{i}', format="%d")
+                st.session_state.apuesta_multiple_datos[f'res_local_multiple_{i}'] = resultado_local
             
             with col3:
-                resultado_visitante = st.number_input("Resultado Visitante", min_value=0, step=1, key=f'res_vis_multiple_{i}', format="%d")
+                default_res_vis = st.session_state.apuesta_multiple_datos.get(f'res_vis_multiple_{i}', 0)
+                resultado_visitante = st.number_input("Resultado Visitante", min_value=0, step=1, value=default_res_vis, key=f'res_vis_multiple_{i}', format="%d")
+                st.session_state.apuesta_multiple_datos[f'res_vis_multiple_{i}'] = resultado_visitante
             
             with col4:
-                equipo_visitante = st.text_input("Equipo Visitante", key=f'vis_multiple_{i}')
+                default_vis = st.session_state.apuesta_multiple_datos.get(f'vis_multiple_{i}', '')
+                equipo_visitante = st.text_input("Equipo Visitante", value=default_vis, key=f'vis_multiple_{i}')
+                st.session_state.apuesta_multiple_datos[f'vis_multiple_{i}'] = equipo_visitante
             
             col1, col2, col3, col4, col5 = st.columns(5)
             
             with col1:
-                cuota_local = st.number_input("Cuota Local", min_value=1.0, value=1.0, step=0.1, key=f'cuota_local_multiple_{i}', format="%.2f")
+                default_cuota_local = st.session_state.apuesta_multiple_datos.get(f'cuota_local_multiple_{i}', 1.0)
+                cuota_local = st.number_input("Cuota Local", min_value=1.0, value=default_cuota_local, step=0.1, key=f'cuota_local_multiple_{i}', format="%.2f")
+                st.session_state.apuesta_multiple_datos[f'cuota_local_multiple_{i}'] = cuota_local
             
             with col2:
-                cuota_empate = st.number_input("Cuota Empate", min_value=1.0, value=1.0, step=0.1, key=f'cuota_empate_multiple_{i}', format="%.2f")
+                default_cuota_empate = st.session_state.apuesta_multiple_datos.get(f'cuota_empate_multiple_{i}', 1.0)
+                cuota_empate = st.number_input("Cuota Empate", min_value=1.0, value=default_cuota_empate, step=0.1, key=f'cuota_empate_multiple_{i}', format="%.2f")
+                st.session_state.apuesta_multiple_datos[f'cuota_empate_multiple_{i}'] = cuota_empate
             
             with col3:
-                cuota_visitante = st.number_input("Cuota Visitante", min_value=1.0, value=1.0, step=0.1, key=f'cuota_vis_multiple_{i}', format="%.2f")
+                default_cuota_vis = st.session_state.apuesta_multiple_datos.get(f'cuota_vis_multiple_{i}', 1.0)
+                cuota_visitante = st.number_input("Cuota Visitante", min_value=1.0, value=default_cuota_vis, step=0.1, key=f'cuota_vis_multiple_{i}', format="%.2f")
+                st.session_state.apuesta_multiple_datos[f'cuota_vis_multiple_{i}'] = cuota_visitante
             
             with col4:
                 st.markdown("**Jugada**")
                 opciones_jugada = []
+                default_jugada = st.session_state.apuesta_multiple_datos.get(f'jugada_multiple_{i}', '')
+                
                 col_j1, col_j2, col_j3 = st.columns(3)
                 with col_j1:
-                    if st.checkbox("1", key=f'jugada_1_{i}'):
+                    jugada_1 = st.checkbox("1", value='1' in default_jugada, key=f'jugada_1_{i}')
+                    if jugada_1:
                         opciones_jugada.append('1')
                 with col_j2:
-                    if st.checkbox("X", key=f'jugada_x_{i}'):
+                    jugada_x = st.checkbox("X", value='x' in default_jugada, key=f'jugada_x_{i}')
+                    if jugada_x:
                         opciones_jugada.append('x')
                 with col_j3:
-                    if st.checkbox("2", key=f'jugada_2_{i}'):
+                    jugada_2 = st.checkbox("2", value='2' in default_jugada, key=f'jugada_2_{i}')
+                    if jugada_2:
                         opciones_jugada.append('2')
                 
                 jugada_str = ''.join(opciones_jugada) if opciones_jugada else '1'
-                st.session_state[f'jugada_multiple_{i}'] = jugada_str
+                st.session_state.apuesta_multiple_datos[f'jugada_multiple_{i}'] = jugada_str
             
             with col5:
                 st.markdown("**Base**")
-                base_col1, base_col2, base_col3 = st.columns(3)
+                base_actual = st.session_state.apuesta_multiple_datos.get(f'base_multiple_{i}', '1')
                 
-                if f'base_multiple_{i}' not in st.session_state:
-                    st.session_state[f'base_multiple_{i}'] = '1'
+                col_b1, col_b2, col_b3 = st.columns(3)
                 
-                with base_col1:
+                with col_b1:
                     if st.button("1", key=f'base1_multiple_{i}'):
-                        st.session_state[f'base_multiple_{i}'] = '1'
+                        st.session_state.apuesta_multiple_datos[f'base_multiple_{i}'] = '1'
                         st.rerun()
-                with base_col2:
+                with col_b2:
                     if st.button("X", key=f'basex_multiple_{i}'):
-                        st.session_state[f'base_multiple_{i}'] = 'x'
+                        st.session_state.apuesta_multiple_datos[f'base_multiple_{i}'] = 'x'
                         st.rerun()
-                with base_col3:
+                with col_b3:
                     if st.button("2", key=f'base2_multiple_{i}'):
-                        st.session_state[f'base_multiple_{i}'] = '2'
+                        st.session_state.apuesta_multiple_datos[f'base_multiple_{i}'] = '2'
                         st.rerun()
             
             # Guardar datos para generación de columnas
             jugadas_multiple.append({
-                'jugada': st.session_state.get(f'jugada_multiple_{i}', '1'),
-                'base': st.session_state.get(f'base_multiple_{i}', '1'),
+                'jugada': st.session_state.apuesta_multiple_datos.get(f'jugada_multiple_{i}', '1'),
+                'base': st.session_state.apuesta_multiple_datos.get(f'base_multiple_{i}', '1'),
                 'cuota_local': cuota_local,
                 'cuota_empate': cuota_empate,
                 'cuota_visitante': cuota_visitante
@@ -1083,7 +1109,9 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
             st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown("### 💰 Monto Total")
-    monto_total = st.number_input("Monto Total (€)", min_value=0.0, value=0.0, step=10.0, key="monto_multiple", format="%.2f")
+    default_monto_total = st.session_state.apuesta_multiple_datos.get('monto_total_multiple', 0.0)
+    monto_total = st.number_input("Monto Total (€)", min_value=0.0, value=default_monto_total, step=10.0, key="monto_multiple", format="%.2f")
+    st.session_state.apuesta_multiple_datos['monto_total_multiple'] = monto_total
     
     # Generar columnas
     if st.button("🔄 GENERAR COLUMNAS", use_container_width=True):
@@ -1144,16 +1172,16 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
                 
                 with col5:
                     # Determinar si la columna cumple con los aciertos base
-                    if all(st.session_state.get(f'res_local_multiple_{i}', 0) == 0 and 
-                          st.session_state.get(f'res_vis_multiple_{i}', 0) == 0 for i in range(len(columna))):
+                    if all(st.session_state.apuesta_multiple_datos.get(f'res_local_multiple_{i}', 0) == 0 and 
+                          st.session_state.apuesta_multiple_datos.get(f'res_vis_multiple_{i}', 0) == 0 for i in range(len(columna))):
                         color_bolita = "roja"
                     else:
                         aciertos = 0
                         for i, signo in enumerate(columna):
                             if i < st.session_state.eventos_count:
-                                res_local = st.session_state.get(f'res_local_multiple_{i}', 0)
-                                res_vis = st.session_state.get(f'res_vis_multiple_{i}', 0)
-                                base = st.session_state.get(f'base_multiple_{i}', '1')
+                                res_local = st.session_state.apuesta_multiple_datos.get(f'res_local_multiple_{i}', 0)
+                                res_vis = st.session_state.apuesta_multiple_datos.get(f'res_vis_multiple_{i}', 0)
+                                base = st.session_state.apuesta_multiple_datos.get(f'base_multiple_{i}', '1')
                                 
                                 if (base == '1' and res_local > res_vis) or \
                                    (base == 'x' and res_local == res_vis) or \
@@ -1186,16 +1214,16 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
         
         for i in range(st.session_state.eventos_count):
             detalle = {
-                "deporte": st.session_state.get(f'deporte_multiple_{i}', ''),
-                "liga": st.session_state.get(f'liga_multiple_{i}', ''),
-                "fecha": str(st.session_state.get(f'fecha_multiple_{i}', '')),
-                "hora": str(st.session_state.get(f'hora_multiple_{i}', '')),
-                "equipo_local": st.session_state.get(f'local_multiple_{i}', ''),
-                "equipo_visitante": st.session_state.get(f'vis_multiple_{i}', ''),
-                "resultado_local": st.session_state.get(f'res_local_multiple_{i}', 0),
-                "resultado_visitante": st.session_state.get(f'res_vis_multiple_{i}', 0),
-                "jugada": st.session_state.get(f'jugada_multiple_{i}', '1'),
-                "base": st.session_state.get(f'base_multiple_{i}', '1')
+                "deporte": st.session_state.apuesta_multiple_datos.get(f'deporte_multiple_{i}', ''),
+                "liga": st.session_state.apuesta_multiple_datos.get(f'liga_multiple_{i}', ''),
+                "fecha": str(st.session_state.apuesta_multiple_datos.get(f'fecha_multiple_{i}', '')),
+                "hora": str(st.session_state.apuesta_multiple_datos.get(f'hora_multiple_{i}', '')),
+                "equipo_local": st.session_state.apuesta_multiple_datos.get(f'local_multiple_{i}', ''),
+                "equipo_visitante": st.session_state.apuesta_multiple_datos.get(f'vis_multiple_{i}', ''),
+                "resultado_local": st.session_state.apuesta_multiple_datos.get(f'res_local_multiple_{i}', 0),
+                "resultado_visitante": st.session_state.apuesta_multiple_datos.get(f'res_vis_multiple_{i}', 0),
+                "jugada": st.session_state.apuesta_multiple_datos.get(f'jugada_multiple_{i}', '1'),
+                "base": st.session_state.apuesta_multiple_datos.get(f'base_multiple_{i}', '1')
             }
             apuesta["detalles"].append(detalle)
         
@@ -1207,7 +1235,6 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
 
 # Página de Jugadas (Sistema)
 elif st.session_state.pagina_actual == "Jugadas":
-    # [Mantener el código existente de Jugadas]
     col1, col2 = st.columns([1, 1])
     
     with col1:
@@ -1235,8 +1262,8 @@ elif st.session_state.pagina_actual == "Jugadas":
                 aciertos = 0
                 for i, signo in enumerate(columna):
                     if i < st.session_state.eventos_count:
-                        res_local = st.session_state.get(f'res_local_jugada_{i}', 0)
-                        res_vis = st.session_state.get(f'res_vis_jugada_{i}', 0)
+                        res_local = st.session_state.jugadas_datos.get(f'res_local_jugada_{i}', 0)
+                        res_vis = st.session_state.jugadas_datos.get(f'res_vis_jugada_{i}', 0)
                         
                         if (signo == '1' and res_local > res_vis) or \
                            (signo == 'x' and res_local == res_vis) or \
@@ -1263,11 +1290,16 @@ elif st.session_state.pagina_actual == "Jugadas":
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
+                default_deporte = st.session_state.jugadas_datos.get(f'deporte_jugada_{i}', 'Fútbol')
+                deporte_index = st.session_state.deportes.index(default_deporte) if default_deporte in st.session_state.deportes else 0
                 deporte = st.selectbox(
                     "Deporte",
                     options=st.session_state.deportes + ["Otro..."],
+                    index=deporte_index,
                     key=f'deporte_jugada_{i}'
                 )
+                st.session_state.jugadas_datos[f'deporte_jugada_{i}'] = deporte
+                
                 if deporte == "Otro...":
                     nuevo_deporte = st.text_input("Nuevo deporte", key=f'nuevo_deporte_jugada_{i}')
                     if nuevo_deporte and nuevo_deporte not in st.session_state.deportes:
@@ -1280,11 +1312,16 @@ elif st.session_state.pagina_actual == "Jugadas":
                     deporte if deporte != "Otro..." else st.session_state.deportes[-1],
                     []
                 )
+                default_liga = st.session_state.jugadas_datos.get(f'liga_jugada_{i}', ligas_disponibles[0] if ligas_disponibles else '')
+                liga_index = ligas_disponibles.index(default_liga) if default_liga in ligas_disponibles else 0
                 liga = st.selectbox(
                     "Liga",
                     options=ligas_disponibles + ["Otra..."],
+                    index=liga_index if ligas_disponibles else 0,
                     key=f'liga_jugada_{i}'
                 )
+                st.session_state.jugadas_datos[f'liga_jugada_{i}'] = liga
+                
                 if liga == "Otra...":
                     nueva_liga = st.text_input("Nueva liga", key=f'nueva_liga_jugada_{i}')
                     if nueva_liga and nueva_liga not in ligas_disponibles:
@@ -1292,59 +1329,82 @@ elif st.session_state.pagina_actual == "Jugadas":
                         st.rerun()
             
             with col3:
-                fecha = st.date_input("Fecha", key=f'fecha_jugada_{i}')
+                default_fecha = st.session_state.jugadas_datos.get(f'fecha_jugada_{i}')
+                fecha = st.date_input("Fecha", value=default_fecha if default_fecha else datetime.now().date(), key=f'fecha_jugada_{i}')
+                st.session_state.jugadas_datos[f'fecha_jugada_{i}'] = fecha
             
             with col4:
-                hora = st.time_input("Hora", value=time(12, 0), key=f'hora_jugada_{i}')
+                default_hora = st.session_state.jugadas_datos.get(f'hora_jugada_{i}')
+                hora = st.time_input("Hora", value=default_hora if default_hora else time(12, 0), key=f'hora_jugada_{i}')
+                st.session_state.jugadas_datos[f'hora_jugada_{i}'] = hora
             
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                equipo_local = st.text_input("Equipo Local", key=f'local_jugada_{i}')
+                default_local = st.session_state.jugadas_datos.get(f'local_jugada_{i}', '')
+                equipo_local = st.text_input("Equipo Local", value=default_local, key=f'local_jugada_{i}')
+                st.session_state.jugadas_datos[f'local_jugada_{i}'] = equipo_local
             
             with col2:
-                resultado_local = st.number_input("Resultado Local", min_value=0, step=1, key=f'res_local_jugada_{i}', format="%d")
+                default_res_local = st.session_state.jugadas_datos.get(f'res_local_jugada_{i}', 0)
+                resultado_local = st.number_input("Resultado Local", min_value=0, step=1, value=default_res_local, key=f'res_local_jugada_{i}', format="%d")
+                st.session_state.jugadas_datos[f'res_local_jugada_{i}'] = resultado_local
             
             with col3:
-                resultado_visitante = st.number_input("Resultado Visitante", min_value=0, step=1, key=f'res_vis_jugada_{i}', format="%d")
+                default_res_vis = st.session_state.jugadas_datos.get(f'res_vis_jugada_{i}', 0)
+                resultado_visitante = st.number_input("Resultado Visitante", min_value=0, step=1, value=default_res_vis, key=f'res_vis_jugada_{i}', format="%d")
+                st.session_state.jugadas_datos[f'res_vis_jugada_{i}'] = resultado_visitante
             
             with col4:
-                equipo_visitante = st.text_input("Equipo Visitante", key=f'vis_jugada_{i}')
+                default_vis = st.session_state.jugadas_datos.get(f'vis_jugada_{i}', '')
+                equipo_visitante = st.text_input("Equipo Visitante", value=default_vis, key=f'vis_jugada_{i}')
+                st.session_state.jugadas_datos[f'vis_jugada_{i}'] = equipo_visitante
             
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                cuota_local = st.number_input("Cuota Local", min_value=1.0, value=1.0, step=0.1, key=f'cuota_local_jugada_{i}', format="%.2f")
+                default_cuota_local = st.session_state.jugadas_datos.get(f'cuota_local_jugada_{i}', 1.0)
+                cuota_local = st.number_input("Cuota Local", min_value=1.0, value=default_cuota_local, step=0.1, key=f'cuota_local_jugada_{i}', format="%.2f")
+                st.session_state.jugadas_datos[f'cuota_local_jugada_{i}'] = cuota_local
             
             with col2:
-                cuota_empate = st.number_input("Cuota Empate", min_value=1.0, value=1.0, step=0.1, key=f'cuota_empate_jugada_{i}', format="%.2f")
+                default_cuota_empate = st.session_state.jugadas_datos.get(f'cuota_empate_jugada_{i}', 1.0)
+                cuota_empate = st.number_input("Cuota Empate", min_value=1.0, value=default_cuota_empate, step=0.1, key=f'cuota_empate_jugada_{i}', format="%.2f")
+                st.session_state.jugadas_datos[f'cuota_empate_jugada_{i}'] = cuota_empate
             
             with col3:
-                cuota_visitante = st.number_input("Cuota Visitante", min_value=1.0, value=1.0, step=0.1, key=f'cuota_vis_jugada_{i}', format="%.2f")
+                default_cuota_vis = st.session_state.jugadas_datos.get(f'cuota_vis_jugada_{i}', 1.0)
+                cuota_visitante = st.number_input("Cuota Visitante", min_value=1.0, value=default_cuota_vis, step=0.1, key=f'cuota_vis_jugada_{i}', format="%.2f")
+                st.session_state.jugadas_datos[f'cuota_vis_jugada_{i}'] = cuota_visitante
             
             with col4:
                 st.markdown("**Jugada**")
                 opciones_jugada = []
+                default_jugada = st.session_state.jugadas_datos.get(f'jugada_sistema_{i}', '')
+                
                 col_j1, col_j2, col_j3 = st.columns(3)
                 with col_j1:
-                    if st.checkbox("1", key=f'jugada_sis_1_{i}'):
+                    jugada_1 = st.checkbox("1", value='1' in default_jugada, key=f'jugada_sis_1_{i}')
+                    if jugada_1:
                         opciones_jugada.append('1')
                 with col_j2:
-                    if st.checkbox("X", key=f'jugada_sis_x_{i}'):
+                    jugada_x = st.checkbox("X", value='x' in default_jugada, key=f'jugada_sis_x_{i}')
+                    if jugada_x:
                         opciones_jugada.append('x')
                 with col_j3:
-                    if st.checkbox("2", key=f'jugada_sis_2_{i}'):
+                    jugada_2 = st.checkbox("2", value='2' in default_jugada, key=f'jugada_sis_2_{i}')
+                    if jugada_2:
                         opciones_jugada.append('2')
                 
                 jugada_str = ''.join(opciones_jugada) if opciones_jugada else '1'
-                st.session_state[f'jugada_sistema_{i}'] = jugada_str
+                st.session_state.jugadas_datos[f'jugada_sistema_{i}'] = jugada_str
             
             # Guardar datos para filtros
             jugadas_sistema.append({
                 'equipo_local': equipo_local,
                 'equipo_visitante': equipo_visitante,
-                'jugada': st.session_state.get(f'jugada_sistema_{i}', '1'),
-                'base': '1',  # Base por defecto, se modificará en filtros
+                'jugada': st.session_state.jugadas_datos.get(f'jugada_sistema_{i}', '1'),
+                'base': st.session_state.jugadas_datos.get(f'base_sistema_{i}', '1'),
                 'cuota_local': cuota_local,
                 'cuota_empate': cuota_empate,
                 'cuota_visitante': cuota_visitante
@@ -1353,15 +1413,17 @@ elif st.session_state.pagina_actual == "Jugadas":
             st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown("### 💰 Monto Total del Sistema")
-    monto_sistema = st.number_input("Monto Total (€)", min_value=0.0, value=0.0, step=10.0, key="monto_sistema", format="%.2f")
+    default_monto_sistema = st.session_state.jugadas_datos.get('monto_sistema', 0.0)
+    monto_sistema = st.number_input("Monto Total (€)", min_value=0.0, value=default_monto_sistema, step=10.0, key="monto_sistema", format="%.2f")
+    st.session_state.jugadas_datos['monto_sistema'] = monto_sistema
     
     if st.button("💾 GUARDAR JUGADAS", use_container_width=True):
         st.session_state.jugadas_sistema = jugadas_sistema
         st.markdown('<div class="success-message">✅ Jugadas guardadas correctamente</div>', unsafe_allow_html=True)
 
+# [El resto de las páginas (Filtros, Columnas, Estadísticas, Billetera, Guardar, Exportar) permanecen igual que en el código anterior]
 # Página de Filtros
 elif st.session_state.pagina_actual == "Filtros":
-    # [Mantener el código existente de Filtros]
     st.markdown("### 🔍 FILTROS DEL SISTEMA")
     
     if not st.session_state.jugadas_sistema:
@@ -1395,6 +1457,7 @@ elif st.session_state.pagina_actual == "Filtros":
                             key=f'base_filtro_{i}'
                         )
                         st.session_state.jugadas_sistema[i]['base'] = base
+                        st.session_state.jugadas_datos[f'base_sistema_{i}'] = base
                 
                 st.markdown('</div>', unsafe_allow_html=True)
         
@@ -1483,7 +1546,6 @@ elif st.session_state.pagina_actual == "Filtros":
 
 # Página de Columnas
 elif st.session_state.pagina_actual == "Columnas":
-    # [Mantener el código existente de Columnas]
     st.markdown("### 📊 COLUMNAS GENERADAS")
     
     if not st.session_state.jugadas_sistema:
@@ -1495,7 +1557,7 @@ elif st.session_state.pagina_actual == "Columnas":
             st.markdown(f'<div class="info-message">📊 Se generaron {len(columnas)} columnas</div>', unsafe_allow_html=True)
         
         if st.session_state.columnas_generadas:
-            monto_total = st.session_state.get('monto_sistema', 0)
+            monto_total = st.session_state.jugadas_datos.get('monto_sistema', 0)
             monto_por_columna = monto_total / len(st.session_state.columnas_generadas) if len(st.session_state.columnas_generadas) > 0 else 0
             
             st.markdown(f"**💰 Monto por columna: € {monto_por_columna:.2f}**")
@@ -1533,15 +1595,15 @@ elif st.session_state.pagina_actual == "Columnas":
                     
                     with col5:
                         # Determinar estado de la columna
-                        if all(st.session_state.get(f'res_local_jugada_{i}', 0) == 0 and 
-                              st.session_state.get(f'res_vis_jugada_{i}', 0) == 0 for i in range(len(columna))):
+                        if all(st.session_state.jugadas_datos.get(f'res_local_jugada_{i}', 0) == 0 and 
+                              st.session_state.jugadas_datos.get(f'res_vis_jugada_{i}', 0) == 0 for i in range(len(columna))):
                             color_bolita = "roja"
                         else:
                             aciertos = 0
                             for i, signo in enumerate(columna):
                                 if i < st.session_state.eventos_count:
-                                    res_local = st.session_state.get(f'res_local_jugada_{i}', 0)
-                                    res_vis = st.session_state.get(f'res_vis_jugada_{i}', 0)
+                                    res_local = st.session_state.jugadas_datos.get(f'res_local_jugada_{i}', 0)
+                                    res_vis = st.session_state.jugadas_datos.get(f'res_vis_jugada_{i}', 0)
                                     
                                     if (signo == '1' and res_local > res_vis) or \
                                        (signo == 'x' and res_local == res_vis) or \
@@ -1577,7 +1639,6 @@ elif st.session_state.pagina_actual == "Columnas":
 
 # Página de Estadísticas de Equipos
 elif st.session_state.pagina_actual == "Est. Equipos":
-    # [Mantener el código existente de Estadísticas de Equipos]
     st.markdown("### ⚽ Estadísticas de Equipos")
     
     if st.session_state.apuestas:
@@ -1637,7 +1698,6 @@ elif st.session_state.pagina_actual == "Est. Equipos":
 
 # Página de Estadísticas de Jugadas
 elif st.session_state.pagina_actual == "Est. Jugadas":
-    # [Mantener el código existente de Estadísticas de Jugadas]
     st.markdown("### 📈 Estadísticas de Jugadas")
     
     if st.session_state.apuestas:
@@ -1691,7 +1751,6 @@ elif st.session_state.pagina_actual == "Est. Jugadas":
 
 # Página de Billetera
 elif st.session_state.pagina_actual == "Billetera":
-    # [Mantener el código existente de Billetera]
     st.markdown("### 💰 Billetera")
     
     col1, col2 = st.columns(2)
@@ -1735,7 +1794,6 @@ elif st.session_state.pagina_actual == "Billetera":
 
 # Página de Guardar
 elif st.session_state.pagina_actual == "Guardar":
-    # [Mantener el código existente de Guardar]
     st.markdown("### 💾 Guardar Datos")
     
     col1, col2 = st.columns(2)
@@ -1761,7 +1819,6 @@ elif st.session_state.pagina_actual == "Guardar":
 
 # Página de Exportar
 elif st.session_state.pagina_actual == "Exportar":
-    # [Mantener el código existente de Exportar]
     st.markdown("### 📤 Exportar Datos")
     
     if st.session_state.apuestas:
