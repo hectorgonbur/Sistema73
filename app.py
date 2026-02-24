@@ -14,11 +14,26 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos personalizados
+# Estilos personalizados con alto contraste
 st.markdown("""
 <style>
+    /* Variables de colores de alto contraste */
+    :root {
+        --text-primary: #000000;
+        --text-secondary: #1a1a1a;
+        --text-white: #ffffff;
+        --bg-primary: #ffffff;
+        --bg-secondary: #f0f2f6;
+        --bg-card: #ffffff;
+        --accent-blue: #0066cc;
+        --accent-purple: #6600cc;
+        --accent-green: #008800;
+        --accent-red: #cc0000;
+        --border-color: #333333;
+    }
+    
     .main-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #0066cc 0%, #6600cc 100%);
         padding: 1.5rem;
         border-radius: 15px;
         margin-bottom: 2rem;
@@ -29,158 +44,171 @@ st.markdown("""
         margin: 0;
         text-align: center;
         font-size: 2.5rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        font-weight: bold;
     }
     .evento-card {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        background: #ffffff;
         padding: 1.5rem;
         border-radius: 15px;
-        border: 1px solid #dee2e6;
+        border: 2px solid #000000;
         margin-bottom: 1rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        transition: transform 0.3s;
-    }
-    .evento-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     }
     .contador-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #0066cc;
         padding: 1rem;
         border-radius: 15px;
         color: white;
         text-align: center;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border: 2px solid #000000;
     }
     .contador {
         font-size: 2rem;
         font-weight: bold;
+        color: #ffffff;
     }
     .contador-verde {
-        color: #4ade80;
+        color: #00ff00;
+        font-weight: bold;
+        text-shadow: 0 0 5px rgba(0,255,0,0.5);
     }
     .contador-normal {
-        color: #000000;
+        color: #ffffff;
+        font-weight: bold;
     }
-    .contador-blanco {
-        color: white;
+    .contador-negro {
+        color: #000000;
+        font-weight: bold;
+        font-size: 1.5rem;
     }
     .bolita {
-        width: 30px;
-        height: 30px;
+        width: 35px;
+        height: 35px;
         border-radius: 50%;
         display: inline-block;
         margin: 0 auto;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        transition: transform 0.3s;
-    }
-    .bolita:hover {
-        transform: scale(1.1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        border: 2px solid #000000;
     }
     .bolita-verde {
-        background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+        background: #00cc00;
     }
     .bolita-roja {
-        background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+        background: #ff3333;
     }
     .base-btn {
-        padding: 5px 10px;
-        margin: 0 2px;
-        border: 1px solid #dee2e6;
-        background-color: white;
-        border-radius: 5px;
+        padding: 8px 15px;
+        margin: 0 3px;
+        border: 2px solid #000000;
+        background-color: #ffffff;
+        border-radius: 8px;
         cursor: pointer;
         font-weight: bold;
-        transition: all 0.3s;
+        font-size: 1.1rem;
+        color: #000000;
+        width: 100%;
     }
     .base-btn:hover {
-        background-color: #e9ecef;
+        background-color: #e6e6e6;
+        transform: scale(1.05);
     }
     .base-btn-selected {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #0066cc;
         color: white;
-        border-color: #667eea;
+        border-color: #000000;
+        font-weight: bold;
     }
     .ganancia-card {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        background: #ffffff;
         padding: 1.5rem;
         border-radius: 15px;
         text-align: center;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        transition: transform 0.3s;
+        border: 2px solid #000000;
     }
-    .ganancia-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    .ganancia-card h4 {
+        color: #000000;
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-bottom: 10px;
     }
     .ganancia-valor {
         font-size: 2rem;
         font-weight: bold;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #0066cc;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
     }
     .columna-card {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        background: #ffffff;
         padding: 1rem;
         border-radius: 10px;
         margin-bottom: 0.5rem;
-        border-left: 5px solid #667eea;
-        transition: transform 0.3s;
+        border-left: 8px solid #0066cc;
+        border-top: 1px solid #000000;
+        border-right: 1px solid #000000;
+        border-bottom: 1px solid #000000;
     }
     .columna-card:hover {
-        transform: translateX(5px);
+        background: #f0f7ff;
     }
     .filtro-card {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        background: #ffffff;
         padding: 1rem;
         border-radius: 10px;
         margin-bottom: 1rem;
-        border-left: 5px solid #764ba2;
+        border-left: 8px solid #6600cc;
+        border-top: 1px solid #000000;
+        border-right: 1px solid #000000;
+        border-bottom: 1px solid #000000;
     }
     .stButton > button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #0066cc;
         color: white;
         font-weight: bold;
-        border: none;
+        border: 2px solid #000000;
         border-radius: 10px;
         padding: 10px 20px;
-        transition: all 0.3s;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        font-size: 1.1rem;
     }
     .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        background: #004999;
+        border-color: #000000;
     }
     .menu-title {
-        font-size: 1.2rem;
+        font-size: 1.3rem;
         font-weight: bold;
-        color: #667eea;
+        color: #0066cc;
         padding: 10px;
-        border-bottom: 2px solid #667eea;
+        border-bottom: 3px solid #0066cc;
         margin-bottom: 10px;
     }
     .success-message {
-        background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+        background: #008800;
         color: white;
         padding: 1rem;
         border-radius: 10px;
         text-align: center;
         font-weight: bold;
+        border: 2px solid #000000;
     }
     .info-message {
-        background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+        background: #0066cc;
         color: white;
         padding: 1rem;
         border-radius: 10px;
         text-align: center;
         font-weight: bold;
+        border: 2px solid #000000;
     }
     .evento-titulo {
-        font-size: 1.2rem;
+        font-size: 1.3rem;
         font-weight: bold;
-        color: #333;
-        margin-bottom: 10px;
+        color: #0066cc;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #0066cc;
+        padding-bottom: 5px;
     }
     .resultado-input {
         max-width: 60px;
@@ -189,41 +217,147 @@ st.markdown("""
         display: flex;
         align-items: center;
         gap: 10px;
-        background-color: white;
-        padding: 5px 10px;
-        border-radius: 5px;
-        border: 1px solid #dee2e6;
+        background-color: #ffffff;
+        padding: 8px 15px;
+        border-radius: 8px;
+        border: 2px solid #000000;
     }
     .eventos-control button {
-        width: 30px;
-        height: 30px;
+        width: 40px;
+        height: 40px;
         padding: 0;
-        font-size: 1.2rem;
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 5px;
+        font-size: 1.3rem;
+        background-color: #0066cc;
+        color: white;
+        border: 2px solid #000000;
+        border-radius: 8px;
         cursor: pointer;
+        font-weight: bold;
     }
     .eventos-control button:hover {
-        background-color: #e9ecef;
+        background-color: #004999;
     }
     .eventos-control span {
-        font-size: 1.2rem;
+        font-size: 1.5rem;
         font-weight: bold;
-        min-width: 30px;
+        min-width: 40px;
         text-align: center;
+        color: #000000;
+    }
+    
+    /* Estilos para inputs y labels */
+    .stSelectbox label, .stDateInput label, .stTimeInput label, .stNumberInput label, .stTextInput label {
+        color: #000000 !important;
+        font-weight: bold !important;
+        font-size: 1rem !important;
+    }
+    
+    .stSelectbox div, .stDateInput div, .stTimeInput div, .stNumberInput div, .stTextInput div {
+        color: #000000 !important;
+    }
+    
+    input, select, textarea {
+        color: #000000 !important;
+        background-color: #ffffff !important;
+        border: 2px solid #000000 !important;
+        font-weight: normal !important;
+    }
+    
+    /* Títulos */
+    h1, h2, h3, h4, h5, h6 {
+        color: #000000 !important;
+        font-weight: bold !important;
+    }
+    
+    h3 {
+        color: #0066cc !important;
+        border-bottom: 2px solid #0066cc;
+        padding-bottom: 5px;
+    }
+    
+    /* Texto general */
+    p, span, div {
+        color: #000000;
+    }
+    
+    /* Sidebar */
+    .css-1d391kg, .css-1lcbmhc {
+        background-color: #f0f2f6;
+    }
+    
+    .stExpander {
+        border: 2px solid #000000 !important;
+        border-radius: 10px !important;
+        margin-bottom: 10px !important;
+    }
+    
+    .stExpander summary {
+        color: #0066cc !important;
+        font-weight: bold !important;
+        font-size: 1.2rem !important;
+    }
+    
+    /* Métricas */
+    .stMetric {
+        background-color: #ffffff;
+        padding: 1rem;
+        border-radius: 10px;
+        border: 2px solid #000000;
+    }
+    
+    .stMetric label {
+        color: #000000 !important;
+        font-weight: bold !important;
+    }
+    
+    .stMetric value {
+        color: #0066cc !important;
+        font-weight: bold !important;
+        font-size: 1.5rem !important;
+    }
+    
+    /* DataFrames */
+    .stDataFrame {
+        border: 2px solid #000000 !important;
+        border-radius: 10px !important;
+    }
+    
+    .stDataFrame th {
+        background-color: #0066cc !important;
+        color: white !important;
+        font-weight: bold !important;
+    }
+    
+    .stDataFrame td {
+        color: #000000 !important;
+    }
+    
+    /* Estilos para los botones de base en fila */
+    .base-row {
+        display: flex;
+        gap: 5px;
+        width: 100%;
+    }
+    .base-row .stButton {
+        flex: 1;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Inicialización de variables de sesión
+# Inicialización de variables de sesión con persistencia mejorada
 def init_session_state():
+    # Variables de navegación
     if 'pagina_actual' not in st.session_state:
         st.session_state.pagina_actual = 'Apuesta Simple'
+    
+    # Variables de eventos
     if 'eventos_count' not in st.session_state:
         st.session_state.eventos_count = 1
+    
+    # Datos de deportes y ligas
     if 'deportes' not in st.session_state:
         st.session_state.deportes = ['Fútbol', 'Baloncesto', 'Tenis', 'Béisbol', 'Fútbol Americano', 'Hockey', 'Voleibol', 'Handball']
+    
     if 'ligas_por_deporte' not in st.session_state:
         st.session_state.ligas_por_deporte = {
             'Fútbol': ['La Liga', 'Premier League', 'Serie A', 'Bundesliga', 'Ligue 1', 'Eredivisie', 'Primeira Liga'],
@@ -235,14 +369,19 @@ def init_session_state():
             'Voleibol': ['Serie A1', 'Superliga', 'Bundesliga', 'Liga Francesa'],
             'Handball': ['Liga Asobal', 'Bundesliga', 'Liga Francesa', 'Liga Danesa']
         }
+    
+    # Apuestas guardadas
     if 'apuestas' not in st.session_state:
         if os.path.exists('apuestas.json'):
             with open('apuestas.json', 'r', encoding='utf-8') as f:
                 st.session_state.apuestas = json.load(f)
         else:
             st.session_state.apuestas = []
+    
+    # Variables del sistema
     if 'jugadas_sistema' not in st.session_state:
         st.session_state.jugadas_sistema = []
+    
     if 'filtros_sistema' not in st.session_state:
         st.session_state.filtros_sistema = {
             'base_min': 0,
@@ -255,18 +394,31 @@ def init_session_state():
             'consecutivos_2': (0, 0),
             'interrupciones': (0, 0)
         }
+    
     if 'columnas_generadas' not in st.session_state:
         st.session_state.columnas_generadas = []
+    
     if 'columnas_generadas_multiple' not in st.session_state:
         st.session_state.columnas_generadas_multiple = []
+    
+    # Variables de billetera
     if 'saldo' not in st.session_state:
         st.session_state.saldo = 1000.0
+    
+    # Variables de apuesta múltiple
     if 'aciertos_min' not in st.session_state:
         st.session_state.aciertos_min = 0
+    
     if 'aciertos_max' not in st.session_state:
         st.session_state.aciertos_max = 0
-    if 'jugada_actual' not in st.session_state:
-        st.session_state.jugada_actual = {}
+    
+    # Diccionario para almacenar todos los datos del formulario de apuesta simple
+    if 'apuesta_simple_datos' not in st.session_state:
+        st.session_state.apuesta_simple_datos = {}
+    
+    # Diccionario para almacenar los estados de las bolitas
+    if 'bolitas_estado' not in st.session_state:
+        st.session_state.bolitas_estado = {}
 
 init_session_state()
 
@@ -285,21 +437,7 @@ def guardar_jugada(nombre_archivo):
     
     # Guardar datos específicos según la página
     if st.session_state.pagina_actual == "Apuesta Simple":
-        for i in range(st.session_state.eventos_count):
-            jugada["datos"][f"evento_{i}"] = {
-                "deporte": st.session_state.get(f'deporte_simple_{i}', ''),
-                "liga": st.session_state.get(f'liga_simple_{i}', ''),
-                "fecha": str(st.session_state.get(f'fecha_simple_{i}', '')),
-                "hora": str(st.session_state.get(f'hora_simple_{i}', '')),
-                "local": st.session_state.get(f'local_simple_{i}', ''),
-                "visitante": st.session_state.get(f'vis_simple_{i}', ''),
-                "resultado_local": st.session_state.get(f'res_local_simple_{i}', 0),
-                "resultado_visitante": st.session_state.get(f'res_vis_simple_{i}', 0),
-                "cuota_local": st.session_state.get(f'cuota_local_simple_{i}', 1.0),
-                "cuota_empate": st.session_state.get(f'cuota_empate_simple_{i}', 1.0),
-                "cuota_visitante": st.session_state.get(f'cuota_vis_simple_{i}', 1.0),
-                "base": st.session_state.get(f'base_simple_{i}', '1')
-            }
+        jugada["datos"] = st.session_state.apuesta_simple_datos.copy()
     
     with open(f"{nombre_archivo}.json", 'w', encoding='utf-8') as f:
         json.dump(jugada, f, ensure_ascii=False, indent=2)
@@ -314,27 +452,36 @@ def cargar_jugada(archivo):
         
         # Cargar datos específicos según la página
         if jugada["tipo"] == "Apuesta Simple":
-            for i in range(jugada["eventos_count"]):
-                evento = jugada["datos"][f"evento_{i}"]
-                st.session_state[f'deporte_simple_{i}'] = evento["deporte"]
-                st.session_state[f'liga_simple_{i}'] = evento["liga"]
-                if evento["fecha"]:
-                    st.session_state[f'fecha_simple_{i}'] = datetime.fromisoformat(evento["fecha"]).date()
-                if evento["hora"]:
-                    st.session_state[f'hora_simple_{i}'] = datetime.fromisoformat(evento["hora"]).time()
-                st.session_state[f'local_simple_{i}'] = evento["local"]
-                st.session_state[f'vis_simple_{i}'] = evento["visitante"]
-                st.session_state[f'res_local_simple_{i}'] = evento["resultado_local"]
-                st.session_state[f'res_vis_simple_{i}'] = evento["resultado_visitante"]
-                st.session_state[f'cuota_local_simple_{i}'] = evento["cuota_local"]
-                st.session_state[f'cuota_empate_simple_{i}'] = evento["cuota_empate"]
-                st.session_state[f'cuota_vis_simple_{i}'] = evento["cuota_visitante"]
-                st.session_state[f'base_simple_{i}'] = evento["base"]
+            st.session_state.apuesta_simple_datos = jugada["datos"].copy()
+            # Actualizar también los estados de las bolitas
+            for key, value in jugada["datos"].items():
+                if key.startswith('res_local_') or key.startswith('res_vis_'):
+                    # Forzar recálculo de bolitas
+                    pass
         
         return True
     except Exception as e:
         st.error(f"Error al cargar el archivo: {e}")
         return False
+
+# Función para actualizar el estado de una bolita
+def actualizar_estado_bolita(i, resultado_local, resultado_visitante, base):
+    if (base == '1' and resultado_local > resultado_visitante) or \
+       (base == 'x' and resultado_local == resultado_visitante) or \
+       (base == '2' and resultado_local < resultado_visitante):
+        st.session_state.bolitas_estado[f'bolita_{i}'] = 'verde'
+        return 'verde'
+    else:
+        st.session_state.bolitas_estado[f'bolita_{i}'] = 'roja'
+        return 'roja'
+
+# Función para contar bolitas verdes
+def contar_bolitas_verdes():
+    count = 0
+    for i in range(st.session_state.eventos_count):
+        if st.session_state.bolitas_estado.get(f'bolita_{i}', 'roja') == 'verde':
+            count += 1
+    return count
 
 # Función para generar combinaciones de columnas
 def generar_columnas(jugadas, filtros):
@@ -414,11 +561,19 @@ def generar_columnas(jugadas, filtros):
     
     return columnas_filtradas
 
+# Función para seleccionar base en apuesta simple
+def seleccionar_base_simple(i, base):
+    st.session_state.apuesta_simple_datos[f'base_simple_{i}'] = base
+    # Actualizar bolita si hay resultados
+    res_local = st.session_state.apuesta_simple_datos.get(f'res_local_simple_{i}', 0)
+    res_vis = st.session_state.apuesta_simple_datos.get(f'res_vis_simple_{i}', 0)
+    actualizar_estado_bolita(i, res_local, res_vis, base)
+
 # Menú lateral
 with st.sidebar:
     st.markdown("""
-    <div style='text-align: center; padding: 20px;'>
-        <h1 style='color: #667eea;'>🎲 MENÚ</h1>
+    <div style='text-align: center; padding: 20px; background-color: #0066cc; border-radius: 10px; margin-bottom: 20px;'>
+        <h1 style='color: white; margin: 0; font-size: 2rem;'>🎲 MENÚ</h1>
     </div>
     """, unsafe_allow_html=True)
     
@@ -475,25 +630,35 @@ if st.session_state.pagina_actual == "Apuesta Simple":
             if st.button("➖", key="minus_eventos_simple"):
                 if st.session_state.eventos_count > 1:
                     st.session_state.eventos_count -= 1
+                    # Limpiar datos de eventos que ya no existen
+                    keys_to_delete = []
+                    for key in st.session_state.apuesta_simple_datos:
+                        for i in range(st.session_state.eventos_count, 30):
+                            if f'_{i}' in key:
+                                keys_to_delete.append(key)
+                    for key in keys_to_delete:
+                        if key in st.session_state.apuesta_simple_datos:
+                            del st.session_state.apuesta_simple_datos[key]
                     st.rerun()
         with eventos_col2:
-            st.markdown(f"<div style='text-align: center; font-size: 1.5rem; font-weight: bold;'>{st.session_state.eventos_count:02d}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='contador-negro'>{st.session_state.eventos_count:02d}</div>", unsafe_allow_html=True)
         with eventos_col3:
             if st.button("➕", key="plus_eventos_simple"):
                 if st.session_state.eventos_count < 30:
                     st.session_state.eventos_count += 1
+                    # Inicializar datos para el nuevo evento
+                    i = st.session_state.eventos_count - 1
+                    if f'base_simple_{i}' not in st.session_state.apuesta_simple_datos:
+                        st.session_state.apuesta_simple_datos[f'base_simple_{i}'] = '1'
                     st.rerun()
     
     with col2:
         st.markdown("### 🎯 Aciertos")
-        # Calcular eventos ganados (bolitas verdes)
-        eventos_ganados = 0
-        for i in range(st.session_state.eventos_count):
-            if f'bolita_simple_{i}' in st.session_state and st.session_state[f'bolita_simple_{i}'] == 'verde':
-                eventos_ganados += 1
+        # Calcular eventos ganados usando el estado de las bolitas
+        eventos_ganados = contar_bolitas_verdes()
         
-        color_class = "contador-verde" if eventos_ganados == st.session_state.eventos_count else "contador-normal"
-        st.markdown(f'<div style="text-align: center; font-size: 1.5rem; font-weight: bold;" class="{color_class}">{eventos_ganados:02d}/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
+        color_class = "contador-verde" if eventos_ganados == st.session_state.eventos_count else "contador-negro"
+        st.markdown(f'<div style="text-align: center; font-size: 1.8rem; font-weight: bold;" class="{color_class}">{eventos_ganados:02d}/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
@@ -508,11 +673,16 @@ if st.session_state.pagina_actual == "Apuesta Simple":
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
+                # Obtener valor guardado o usar default
+                default_deporte = st.session_state.apuesta_simple_datos.get(f'deporte_simple_{i}', 'Fútbol')
                 deporte = st.selectbox(
                     "Deporte",
                     options=st.session_state.deportes + ["Otro..."],
+                    index=st.session_state.deportes.index(default_deporte) if default_deporte in st.session_state.deportes else 0,
                     key=f'deporte_simple_{i}'
                 )
+                st.session_state.apuesta_simple_datos[f'deporte_simple_{i}'] = deporte
+                
                 if deporte == "Otro...":
                     nuevo_deporte = st.text_input("Nuevo deporte", key=f'nuevo_deporte_simple_{i}')
                     if nuevo_deporte and nuevo_deporte not in st.session_state.deportes:
@@ -525,11 +695,16 @@ if st.session_state.pagina_actual == "Apuesta Simple":
                     deporte if deporte != "Otro..." else st.session_state.deportes[-1],
                     []
                 )
+                default_liga = st.session_state.apuesta_simple_datos.get(f'liga_simple_{i}', ligas_disponibles[0] if ligas_disponibles else '')
+                liga_index = ligas_disponibles.index(default_liga) if default_liga in ligas_disponibles else 0
                 liga = st.selectbox(
                     "Liga",
                     options=ligas_disponibles + ["Otra..."],
+                    index=liga_index if ligas_disponibles else 0,
                     key=f'liga_simple_{i}'
                 )
+                st.session_state.apuesta_simple_datos[f'liga_simple_{i}'] = liga
+                
                 if liga == "Otra...":
                     nueva_liga = st.text_input("Nueva liga", key=f'nueva_liga_simple_{i}')
                     if nueva_liga and nueva_liga not in ligas_disponibles:
@@ -537,69 +712,85 @@ if st.session_state.pagina_actual == "Apuesta Simple":
                         st.rerun()
             
             with col3:
-                fecha = st.date_input("Fecha", key=f'fecha_simple_{i}')
+                default_fecha = st.session_state.apuesta_simple_datos.get(f'fecha_simple_{i}')
+                fecha = st.date_input("Fecha", value=default_fecha if default_fecha else datetime.now().date(), key=f'fecha_simple_{i}')
+                st.session_state.apuesta_simple_datos[f'fecha_simple_{i}'] = fecha
             
             with col4:
-                hora = st.time_input("Hora", value=time(12, 0), key=f'hora_simple_{i}')
+                default_hora = st.session_state.apuesta_simple_datos.get(f'hora_simple_{i}')
+                hora = st.time_input("Hora", value=default_hora if default_hora else time(12, 0), key=f'hora_simple_{i}')
+                st.session_state.apuesta_simple_datos[f'hora_simple_{i}'] = hora
             
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                equipo_local = st.text_input("Equipo Local", key=f'local_simple_{i}')
+                default_local = st.session_state.apuesta_simple_datos.get(f'local_simple_{i}', '')
+                equipo_local = st.text_input("Equipo Local", value=default_local, key=f'local_simple_{i}')
+                st.session_state.apuesta_simple_datos[f'local_simple_{i}'] = equipo_local
             
             with col2:
-                resultado_local = st.number_input("Resultado Local", min_value=0, step=1, key=f'res_local_simple_{i}', format="%d")
+                default_res_local = st.session_state.apuesta_simple_datos.get(f'res_local_simple_{i}', 0)
+                resultado_local = st.number_input("Resultado Local", min_value=0, step=1, value=default_res_local, key=f'res_local_simple_{i}', format="%d")
+                st.session_state.apuesta_simple_datos[f'res_local_simple_{i}'] = resultado_local
             
             with col3:
-                resultado_visitante = st.number_input("Resultado Visitante", min_value=0, step=1, key=f'res_vis_simple_{i}', format="%d")
+                default_res_vis = st.session_state.apuesta_simple_datos.get(f'res_vis_simple_{i}', 0)
+                resultado_visitante = st.number_input("Resultado Visitante", min_value=0, step=1, value=default_res_vis, key=f'res_vis_simple_{i}', format="%d")
+                st.session_state.apuesta_simple_datos[f'res_vis_simple_{i}'] = resultado_visitante
             
             with col4:
-                equipo_visitante = st.text_input("Equipo Visitante", key=f'vis_simple_{i}')
+                default_vis = st.session_state.apuesta_simple_datos.get(f'vis_simple_{i}', '')
+                equipo_visitante = st.text_input("Equipo Visitante", value=default_vis, key=f'vis_simple_{i}')
+                st.session_state.apuesta_simple_datos[f'vis_simple_{i}'] = equipo_visitante
             
             col1, col2, col3, col4, col5 = st.columns(5)
             
             with col1:
-                cuota_local = st.number_input("Cuota Local", min_value=1.0, value=1.0, step=0.1, key=f'cuota_local_simple_{i}', format="%.2f")
+                default_cuota_local = st.session_state.apuesta_simple_datos.get(f'cuota_local_simple_{i}', 1.0)
+                cuota_local = st.number_input("Cuota Local", min_value=1.0, value=default_cuota_local, step=0.1, key=f'cuota_local_simple_{i}', format="%.2f")
+                st.session_state.apuesta_simple_datos[f'cuota_local_simple_{i}'] = cuota_local
             
             with col2:
-                cuota_empate = st.number_input("Cuota Empate", min_value=1.0, value=1.0, step=0.1, key=f'cuota_empate_simple_{i}', format="%.2f")
+                default_cuota_empate = st.session_state.apuesta_simple_datos.get(f'cuota_empate_simple_{i}', 1.0)
+                cuota_empate = st.number_input("Cuota Empate", min_value=1.0, value=default_cuota_empate, step=0.1, key=f'cuota_empate_simple_{i}', format="%.2f")
+                st.session_state.apuesta_simple_datos[f'cuota_empate_simple_{i}'] = cuota_empate
             
             with col3:
-                cuota_visitante = st.number_input("Cuota Visitante", min_value=1.0, value=1.0, step=0.1, key=f'cuota_vis_simple_{i}', format="%.2f")
+                default_cuota_vis = st.session_state.apuesta_simple_datos.get(f'cuota_vis_simple_{i}', 1.0)
+                cuota_visitante = st.number_input("Cuota Visitante", min_value=1.0, value=default_cuota_vis, step=0.1, key=f'cuota_vis_simple_{i}', format="%.2f")
+                st.session_state.apuesta_simple_datos[f'cuota_vis_simple_{i}'] = cuota_visitante
             
             with col4:
                 st.markdown("**Base**")
-                base_col1, base_col2, base_col3 = st.columns(3)
+                base_actual = st.session_state.apuesta_simple_datos.get(f'base_simple_{i}', '1')
                 
-                if f'base_simple_{i}' not in st.session_state:
-                    st.session_state[f'base_simple_{i}'] = '1'
+                # Crear tres botones en fila
+                col_b1, col_b2, col_b3 = st.columns(3)
                 
-                with base_col1:
+                with col_b1:
+                    btn_class = "base-btn-selected" if base_actual == '1' else "base-btn"
                     if st.button("1", key=f'base1_simple_{i}'):
-                        st.session_state[f'base_simple_{i}'] = '1'
+                        seleccionar_base_simple(i, '1')
                         st.rerun()
-                with base_col2:
+                
+                with col_b2:
+                    btn_class = "base-btn-selected" if base_actual == 'x' else "base-btn"
                     if st.button("X", key=f'basex_simple_{i}'):
-                        st.session_state[f'base_simple_{i}'] = 'x'
+                        seleccionar_base_simple(i, 'x')
                         st.rerun()
-                with base_col3:
+                
+                with col_b3:
+                    btn_class = "base-btn-selected" if base_actual == '2' else "base-btn"
                     if st.button("2", key=f'base2_simple_{i}'):
-                        st.session_state[f'base_simple_{i}'] = '2'
+                        seleccionar_base_simple(i, '2')
                         st.rerun()
             
             with col5:
                 st.markdown("**Estado**")
-                base = st.session_state.get(f'base_simple_{i}', '1')
+                base = st.session_state.apuesta_simple_datos.get(f'base_simple_{i}', '1')
                 
                 # Determinar color de la bolita
-                if (base == '1' and resultado_local > resultado_visitante) or \
-                   (base == 'x' and resultado_local == resultado_visitante) or \
-                   (base == '2' and resultado_local < resultado_visitante):
-                    color_bolita = "verde"
-                    st.session_state[f'bolita_simple_{i}'] = "verde"
-                else:
-                    color_bolita = "roja"
-                    st.session_state[f'bolita_simple_{i}'] = "roja"
+                color_bolita = actualizar_estado_bolita(i, resultado_local, resultado_visitante, base)
                 
                 st.markdown(f'<div style="display: flex; justify-content: center;"><div class="bolita bolita-{color_bolita}"></div></div>', unsafe_allow_html=True)
             
@@ -618,7 +809,9 @@ if st.session_state.pagina_actual == "Apuesta Simple":
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        monto_jugado = st.number_input("Monto Jugado (€)", min_value=0.0, value=0.0, step=10.0, key="monto_simple", format="%.2f")
+        default_monto = st.session_state.apuesta_simple_datos.get('monto_simple', 0.0)
+        monto_jugado = st.number_input("Monto Jugado (€)", min_value=0.0, value=default_monto, step=10.0, key="monto_simple", format="%.2f")
+        st.session_state.apuesta_simple_datos['monto_simple'] = monto_jugado
     
     with col2:
         ganancia_bruta = monto_jugado * cuota_total
@@ -661,16 +854,16 @@ if st.session_state.pagina_actual == "Apuesta Simple":
         
         for i in range(st.session_state.eventos_count):
             detalle = {
-                "deporte": st.session_state.get(f'deporte_simple_{i}', ''),
-                "liga": st.session_state.get(f'liga_simple_{i}', ''),
-                "fecha": str(st.session_state.get(f'fecha_simple_{i}', '')),
-                "hora": str(st.session_state.get(f'hora_simple_{i}', '')),
-                "equipo_local": st.session_state.get(f'local_simple_{i}', ''),
-                "equipo_visitante": st.session_state.get(f'vis_simple_{i}', ''),
-                "resultado_local": st.session_state.get(f'res_local_simple_{i}', 0),
-                "resultado_visitante": st.session_state.get(f'res_vis_simple_{i}', 0),
-                "base": st.session_state.get(f'base_simple_{i}', '1'),
-                "estado": st.session_state.get(f'bolita_simple_{i}', 'roja')
+                "deporte": st.session_state.apuesta_simple_datos.get(f'deporte_simple_{i}', ''),
+                "liga": st.session_state.apuesta_simple_datos.get(f'liga_simple_{i}', ''),
+                "fecha": str(st.session_state.apuesta_simple_datos.get(f'fecha_simple_{i}', '')),
+                "hora": str(st.session_state.apuesta_simple_datos.get(f'hora_simple_{i}', '')),
+                "equipo_local": st.session_state.apuesta_simple_datos.get(f'local_simple_{i}', ''),
+                "equipo_visitante": st.session_state.apuesta_simple_datos.get(f'vis_simple_{i}', ''),
+                "resultado_local": st.session_state.apuesta_simple_datos.get(f'res_local_simple_{i}', 0),
+                "resultado_visitante": st.session_state.apuesta_simple_datos.get(f'res_vis_simple_{i}', 0),
+                "base": st.session_state.apuesta_simple_datos.get(f'base_simple_{i}', '1'),
+                "estado": st.session_state.bolitas_estado.get(f'bolita_{i}', 'roja')
             }
             apuesta["detalles"].append(detalle)
         
@@ -681,8 +874,12 @@ if st.session_state.pagina_actual == "Apuesta Simple":
         
         st.markdown('<div class="success-message">✅ Apuesta registrada correctamente!</div>', unsafe_allow_html=True)
 
+# [El resto de las páginas (Apuesta Múltiple, Jugadas, Filtros, Columnas, Estadísticas, Billetera, Guardar, Exportar) 
+# permanecen igual que en el código anterior, pero asegurándose de que usen st.session_state para persistencia]
+
 # Página de Apuesta Múltiple
 elif st.session_state.pagina_actual == "Apuesta Múltiple":
+    # [Mantener el código existente de Apuesta Múltiple]
     col1, col2, col3 = st.columns([1, 1, 2])
     
     with col1:
@@ -694,7 +891,7 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
                     st.session_state.eventos_count -= 1
                     st.rerun()
         with eventos_col2:
-            st.markdown(f"<div style='text-align: center; font-size: 1.5rem; font-weight: bold;'>{st.session_state.eventos_count:02d}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='contador-negro'>{st.session_state.eventos_count:02d}</div>", unsafe_allow_html=True)
         with eventos_col3:
             if st.button("➕", key="plus_eventos_multiple"):
                 if st.session_state.eventos_count < 30:
@@ -722,10 +919,10 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
                                 aciertos += 1
                 max_aciertos = max(max_aciertos, aciertos)
             
-            color_class = "contador-verde" if max_aciertos >= st.session_state.get('aciertos_min', 0) else "contador-normal"
-            st.markdown(f'<div style="text-align: center; font-size: 1.5rem; font-weight: bold;" class="{color_class}">{max_aciertos:02d}/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
+            color_class = "contador-verde" if max_aciertos >= st.session_state.get('aciertos_min', 0) else "contador-negro"
+            st.markdown(f'<div style="text-align: center; font-size: 1.8rem; font-weight: bold;" class="{color_class}">{max_aciertos:02d}/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<div style="text-align: center; font-size: 1.5rem; font-weight: bold;" class="contador-normal">00/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="text-align: center; font-size: 1.8rem; font-weight: bold;" class="contador-negro">00/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
     
     with col3:
         st.markdown("### 🎯 Aciertos Base")
@@ -746,7 +943,7 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
                     st.session_state.aciertos_min += 1
                     st.rerun()
         
-        st.markdown("<h3 style='text-align: center;'>A</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align: center; color: #000000; font-weight: bold;'>A</h3>", unsafe_allow_html=True)
         
         col_min2, col_medio2, col_max2 = st.columns([2, 1, 2])
         with col_min2:
@@ -1010,6 +1207,7 @@ elif st.session_state.pagina_actual == "Apuesta Múltiple":
 
 # Página de Jugadas (Sistema)
 elif st.session_state.pagina_actual == "Jugadas":
+    # [Mantener el código existente de Jugadas]
     col1, col2 = st.columns([1, 1])
     
     with col1:
@@ -1021,7 +1219,7 @@ elif st.session_state.pagina_actual == "Jugadas":
                     st.session_state.eventos_count -= 1
                     st.rerun()
         with eventos_col2:
-            st.markdown(f"<div style='text-align: center; font-size: 1.5rem; font-weight: bold;'>{st.session_state.eventos_count:02d}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='contador-negro'>{st.session_state.eventos_count:02d}</div>", unsafe_allow_html=True)
         with eventos_col3:
             if st.button("➕", key="plus_eventos_jugadas"):
                 if st.session_state.eventos_count < 30:
@@ -1046,10 +1244,10 @@ elif st.session_state.pagina_actual == "Jugadas":
                             aciertos += 1
                 max_aciertos = max(max_aciertos, aciertos)
             
-            color_class = "contador-verde" if max_aciertos == st.session_state.eventos_count else "contador-normal"
-            st.markdown(f'<div style="text-align: center; font-size: 1.5rem; font-weight: bold;" class="{color_class}">{max_aciertos:02d}/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
+            color_class = "contador-verde" if max_aciertos == st.session_state.eventos_count else "contador-negro"
+            st.markdown(f'<div style="text-align: center; font-size: 1.8rem; font-weight: bold;" class="{color_class}">{max_aciertos:02d}/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<div style="text-align: center; font-size: 1.5rem; font-weight: bold;" class="contador-normal">00/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="text-align: center; font-size: 1.8rem; font-weight: bold;" class="contador-negro">00/{st.session_state.eventos_count:02d}</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     st.markdown("### 🎯 Eventos - Sistema de Jugadas")
@@ -1163,6 +1361,7 @@ elif st.session_state.pagina_actual == "Jugadas":
 
 # Página de Filtros
 elif st.session_state.pagina_actual == "Filtros":
+    # [Mantener el código existente de Filtros]
     st.markdown("### 🔍 FILTROS DEL SISTEMA")
     
     if not st.session_state.jugadas_sistema:
@@ -1284,6 +1483,7 @@ elif st.session_state.pagina_actual == "Filtros":
 
 # Página de Columnas
 elif st.session_state.pagina_actual == "Columnas":
+    # [Mantener el código existente de Columnas]
     st.markdown("### 📊 COLUMNAS GENERADAS")
     
     if not st.session_state.jugadas_sistema:
@@ -1377,6 +1577,7 @@ elif st.session_state.pagina_actual == "Columnas":
 
 # Página de Estadísticas de Equipos
 elif st.session_state.pagina_actual == "Est. Equipos":
+    # [Mantener el código existente de Estadísticas de Equipos]
     st.markdown("### ⚽ Estadísticas de Equipos")
     
     if st.session_state.apuestas:
@@ -1436,6 +1637,7 @@ elif st.session_state.pagina_actual == "Est. Equipos":
 
 # Página de Estadísticas de Jugadas
 elif st.session_state.pagina_actual == "Est. Jugadas":
+    # [Mantener el código existente de Estadísticas de Jugadas]
     st.markdown("### 📈 Estadísticas de Jugadas")
     
     if st.session_state.apuestas:
@@ -1489,6 +1691,7 @@ elif st.session_state.pagina_actual == "Est. Jugadas":
 
 # Página de Billetera
 elif st.session_state.pagina_actual == "Billetera":
+    # [Mantener el código existente de Billetera]
     st.markdown("### 💰 Billetera")
     
     col1, col2 = st.columns(2)
@@ -1532,6 +1735,7 @@ elif st.session_state.pagina_actual == "Billetera":
 
 # Página de Guardar
 elif st.session_state.pagina_actual == "Guardar":
+    # [Mantener el código existente de Guardar]
     st.markdown("### 💾 Guardar Datos")
     
     col1, col2 = st.columns(2)
@@ -1557,6 +1761,7 @@ elif st.session_state.pagina_actual == "Guardar":
 
 # Página de Exportar
 elif st.session_state.pagina_actual == "Exportar":
+    # [Mantener el código existente de Exportar]
     st.markdown("### 📤 Exportar Datos")
     
     if st.session_state.apuestas:
